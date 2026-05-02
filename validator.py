@@ -20,11 +20,12 @@ def find_excel_files(file_group: list[Path]) -> list[Path]:
 
 def read_dmc_from_excel(excel_file: Path) -> str | None:
     workbook = load_workbook(excel_file, data_only=True, read_only=True)
-    sheet = workbook.active
 
-    value = sheet["I17"].value
-
-    workbook.close()
+    try:
+        sheet = workbook.active
+        value = sheet["I17"].value
+    finally:
+        workbook.close()
 
     if value is None:
         return None
@@ -47,18 +48,23 @@ def validate_group(file_group: list[Path]) -> ValidationResult:
             reason="No Excel file found in group"
         )
 
+    first_dmc = None
+
     for excel_file in excel_files:
         dmc = read_dmc_from_excel(excel_file)
 
-        if dmc is not None:
+        if dmc is None:
             return ValidationResult(
-                valid=True,
-                dmc=dmc,
-                reason=None
+                valid=False,
+                dmc=None,
+                reason=f"Missing DMC in {excel_file.name}"
             )
 
+        if first_dmc is None:
+            first_dmc = dmc
+
     return ValidationResult(
-        valid=False,
-        dmc=None,
-        reason="No DMC found in Excel cell I17"
+        valid=True,
+        dmc=first_dmc,
+        reason=None
     )
