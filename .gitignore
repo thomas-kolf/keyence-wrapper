@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+
+input/
+data_lake_ready/
+no_dmc_related/
