@@ -23,12 +23,14 @@ def find_file_groups(input_dir: Path) -> dict[str, list[Path]]:
     return dict(groups)
 
 
-if __name__ == "__main__":
-    input_dir = Path("input")
-
-    groups = find_file_groups(input_dir)
-
+#Helper function for printing the groups
+def print_groups(groups: dict[str, list[Path]]) -> None:
     for group_key, files in groups.items():
         print(f"\nGroup: {group_key}")
         for file in files:
-            print(f"  - {file}")
+            print(f"  - {file.name}")
+
+if __name__ == "__main__":
+    input_dir = Path("input")
+    groups = find_file_groups(input_dir)
+    print_groups(groups)
