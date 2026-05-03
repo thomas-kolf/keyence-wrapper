@@ -111,7 +111,7 @@ def extract_measurements_from_excel(excel_file: Path) -> list[Measurement]:
             nr = clean_cell_value(sheet[f"B{row}"].value)
             measurement_name = clean_cell_value(sheet[f"C{row}"].value)
 
-            if nr is None and measurement_name is None:
+            if nr is None:
                 break
 
             measurement = Measurement(
