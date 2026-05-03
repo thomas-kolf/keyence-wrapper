@@ -66,3 +66,20 @@ def extract_metadata(file_group: list[Path]) -> list[CellMetadata]:
         metadata_list.append(metadata)
 
     return metadata_list
+
+def normalize_positions(metadata_list: list[CellMetadata]) -> dict[str, str]:
+    raw_positions = []
+
+    for metadata in metadata_list:
+        if metadata.position is not None:
+            raw_positions.append(metadata.position)
+
+    sorted_positions = sorted(raw_positions, key=lambda pos: int(pos))
+
+    position_mapping = {}
+
+    for index, raw_position in enumerate(sorted_positions, start=1):
+        normalized_position = f"{index:02d}"
+        position_mapping[raw_position] = normalized_position
+
+    return position_mapping
