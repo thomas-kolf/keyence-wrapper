@@ -185,10 +185,10 @@ def build_cell_data(file_group: list[Path]) -> list[dict]:
 
     return cell_data_list
 
-def write_cell_json(cell_data: dict, output_dir: Path) -> Path:
+def write_cell_json(cell_data: dict, output_dir: Path, file_base_name: str) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    output_file = output_dir / f"{cell_data['cell_dmc']}.json"
+    output_file = output_dir / f"{file_base_name}.json"
 
     with output_file.open("w", encoding="utf-8") as json_file:
         json.dump(cell_data, json_file, ensure_ascii=False, indent=4)
