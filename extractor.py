@@ -1,6 +1,7 @@
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from openpyxl import load_workbook
+import json
 
 
 @dataclass
@@ -183,3 +184,13 @@ def build_cell_data(file_group: list[Path]) -> list[dict]:
         cell_data_list.append(cell_data)
 
     return cell_data_list
+
+def write_cell_json(cell_data: dict, output_dir: Path) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    output_file = output_dir / f"{cell_data['cell_dmc']}.json"
+
+    with output_file.open("w", encoding="utf-8") as json_file:
+        json.dump(cell_data, json_file, ensure_ascii=False, indent=4)
+
+    return output_file
