@@ -4,6 +4,7 @@ from file_grouping import find_file_groups
 from validator import validate_group
 from extractor import build_cell_data, write_cell_json
 from file_exporter import export_related_files, build_export_base_name
+from preview_generator import generate_previews
 
 
 def main() -> None:
@@ -50,6 +51,11 @@ def main() -> None:
 
         else:
             print(f"\n{group_key}: INVALID | {result.reason}")
+
+    created_previews = generate_previews(output_dir)
+
+    for preview in created_previews:
+        print(f"Preview created: {preview.name}")
 
 
 if __name__ == "__main__":
