@@ -10,6 +10,11 @@ from preview_generator import generate_previews
 def main() -> None:
     input_dir = Path("input")
     output_dir = Path("data_lake_ready")
+    no_dmc_dir = Path("no_dmc_related")
+
+    input_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(exist_ok=True)
+    no_dmc_dir.mkdir(exist_ok=True)
 
     groups = find_file_groups(input_dir)
 
