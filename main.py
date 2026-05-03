@@ -2,11 +2,7 @@ from pathlib import Path
 
 from file_grouping import find_file_groups
 from validator import validate_group
-from extractor import (
-    extract_metadata,
-    normalize_positions,
-    extract_measurements_from_excel,
-)
+from extractor import build_cell_data
 
 
 def main() -> None:
@@ -20,26 +16,15 @@ def main() -> None:
         if result.valid:
             print(f"\n{group_key}: VALID | DMC = {result.dmc}")
 
-            metadata_list = extract_metadata(files)
-            position_mapping = normalize_positions(metadata_list)
+            cell_data_list = build_cell_data(files)
 
-            for metadata in metadata_list:
-                normalized_position = position_mapping[metadata.position]
-                cell_dmc = f"{metadata.leadframe_dmc}-{normalized_position}"
-
-                print(metadata)
-                print(f"normalized_position = {normalized_position}")
-                print(f"cell_dmc = {cell_dmc}")
-
-                excel_file = next(
-                    file for file in files
-                    if file.name == metadata.source_file
+            for cell_data in cell_data_list:
+                print(
+                    f"{cell_data['cell_dmc']} | "
+                    f"raw_pos={cell_data['raw_position']} | "
+                    f"quality={cell_data['quality']} | "
+                    f"measurements={len(cell_data['measurements'])}"
                 )
-
-                measurements = extract_measurements_from_excel(excel_file)
-
-                for measurement in measurements:
-                    print(measurement)
 
         else:
             print(f"\n{group_key}: INVALID | {result.reason}")

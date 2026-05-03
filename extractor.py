@@ -1,5 +1,5 @@
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from openpyxl import load_workbook
 
 
@@ -136,3 +136,50 @@ def extract_measurements_from_excel(excel_file: Path) -> list[Measurement]:
         workbook.close()
 
     return measurements
+
+def determine_quality(metadata: CellMetadata) -> str:
+    if metadata.overall_result is not None and metadata.overall_result.lower() == "ok":
+        return "IO"
+
+    return "NIO"
+
+
+def build_cell_data(file_group: list[Path]) -> list[dict]:
+    metadata_list = extract_metadata(file_group)
+    position_mapping = normalize_positions(metadata_list)
+
+    cell_data_list = []
+
+    for metadata in metadata_list:
+        normalized_position = position_mapping[metadata.position]
+        cell_dmc = f"{metadata.leadframe_dmc}-{normalized_position}"
+
+        excel_file = next(
+            file for file in file_group
+            if file.name == metadata.source_file
+        )
+
+        measurements = extract_measurements_from_excel(excel_file)
+        quality = determine_quality(metadata)
+
+        cell_data = {
+            "source_file": metadata.source_file,
+            "timestamp": metadata.timestamp,
+            "leadframe_dmc": metadata.leadframe_dmc,
+            "raw_position": metadata.position,
+            "position": normalized_position,
+            "cell_dmc": cell_dmc,
+            "name": metadata.name,
+            "product_name": metadata.product_name,
+            "device": metadata.device,
+            "overall_result": metadata.overall_result,
+            "quality": quality,
+            "measurements": [
+                asdict(measurement)
+                for measurement in measurements
+            ],
+        }
+
+        cell_data_list.append(cell_data)
+
+    return cell_data_list
