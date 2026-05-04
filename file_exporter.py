@@ -3,6 +3,15 @@ import shutil
 import re
 
 
+EXPECTED_RAW_SUFFIXES = [
+    ".xlsx",
+    ".csv",
+    ".zmr",
+    "_h.png",
+    "_t.png",
+]
+
+
 def clean_filename_part(value: str | None) -> str:
     if value is None:
         return "unknown"
@@ -67,6 +76,39 @@ def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
     return related_files
 
 
+def find_missing_raw_files(cell_data: dict, file_group: list[Path]) -> list[str]:
+    source_file = Path(cell_data["source_file"])
+    source_stem = source_file.stem
+
+    existing_names = {file_path.name for file_path in file_group if file_path.is_file()}
+
+    expected_names = [
+        f"{source_stem}.xlsx",
+        f"{source_stem}.csv",
+        f"{source_stem}.zmr",
+        f"{source_stem}_h.png",
+        f"{source_stem}_t.png",
+    ]
+
+    missing_files = []
+
+    for expected_name in expected_names:
+        if expected_name not in existing_names:
+            missing_files.append(expected_name)
+
+    return missing_files
+
+
+def print_missing_raw_files_warning(cell_data: dict, missing_files: list[str]) -> None:
+    if not missing_files:
+        return
+
+    print(f"WARNING: Missing related raw files for {cell_data['cell_dmc']}:")
+
+    for missing_file in missing_files:
+        print(f"  - {missing_file}")
+
+
 def export_related_files(
     cell_data: dict,
     file_group: list[Path],
@@ -77,6 +119,9 @@ def export_related_files(
 
     base_name = build_export_base_name(cell_data, group_key)
     related_files = find_related_files(cell_data, file_group)
+
+    missing_files = find_missing_raw_files(cell_data, file_group)
+    print_missing_raw_files_warning(cell_data, missing_files)
 
     exported_files = []
 
