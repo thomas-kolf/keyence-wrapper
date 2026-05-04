@@ -6,16 +6,19 @@ from extractor import build_cell_data, write_cell_json
 from file_exporter import export_related_files, build_export_base_name
 from preview_generator import generate_previews
 from export_verifier import verify_exports, print_export_verification_result
+from measurement_verifier import verify_measurements, print_measurement_verification_result
 
 
 def main() -> None:
     input_dir = Path("input")
     output_dir = Path("data_lake_ready")
     no_dmc_dir = Path("no_dmc_related")
+    failed_dir = Path("failed_process")
 
     input_dir.mkdir(exist_ok=True)
     output_dir.mkdir(exist_ok=True)
     no_dmc_dir.mkdir(exist_ok=True)
+    failed_dir.mkdir(exist_ok=True)
 
     groups = find_file_groups(input_dir)
 
@@ -60,11 +63,22 @@ def main() -> None:
 
     created_previews = generate_previews(output_dir)
 
-    for preview in created_previews:
-        print(f"Preview created: {preview.name}")
+    if created_previews:
+        print(f"Previews created: {len(created_previews)}")
+    else:
+        print("No new previews needed")
 
-    problems = verify_exports(output_dir)
-    print_export_verification_result(problems)
+    export_problems = verify_exports(output_dir)
+    print_export_verification_result(export_problems)
+
+    if export_problems:
+        raise RuntimeError("Export verification failed. Process stopped.")
+
+    measurement_problems = verify_measurements(output_dir)
+    print_measurement_verification_result(measurement_problems)
+
+    if measurement_problems:
+        raise RuntimeError("Measurement verification failed. Process stopped.")
 
 
 if __name__ == "__main__":

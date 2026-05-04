@@ -1,0 +1,193 @@
+import csv
+import json
+from pathlib import Path
+
+
+CSV_TO_JSON_FIELDS = {
+    "Nummer": "nr",
+    "Name Messung": "measurement_name",
+    "Elem 1": "elem_1",
+    "": "detail",
+    "Elem 2": "elem_2",
+    "Beurteilung": "classification",
+    "Messergebnis": "value",
+    "Einheit": "unit",
+    "Sollwert": "target",
+    "Obere Toleranz": "upper_tolerance",
+    "Untere Toleranz": "lower_tolerance",
+    "Kommentar": "kommentar",
+}
+
+
+NUMERIC_FIELDS = {
+    "value",
+    "target",
+    "upper_tolerance",
+    "lower_tolerance",
+}
+
+
+def normalize_text(value) -> str | None:
+    if value is None:
+        return None
+
+    value = str(value).strip()
+
+    if value == "":
+        return None
+
+    return value
+
+
+def normalize_number(value) -> str | None:
+    value = normalize_text(value)
+
+    if value is None:
+        return None
+
+    value = value.replace(",", ".")
+
+    number = float(value)
+
+    if number.is_integer():
+        return str(int(number))
+
+    return str(number)
+
+
+def normalize_value(value, field_name: str) -> str | None:
+    if field_name in NUMERIC_FIELDS:
+        return normalize_number(value)
+
+    return normalize_text(value)
+
+
+def read_csv_measurements(csv_path: Path) -> list[dict]:
+    encodings = ["utf-8-sig", "cp1252", "latin1"]
+
+    last_error = None
+
+    for encoding in encodings:
+        try:
+            with csv_path.open("r", encoding=encoding, newline="") as file:
+                reader = csv.DictReader(file, delimiter=";")
+                rows = []
+
+                for csv_row in reader:
+                    measurement = {}
+
+                    for csv_field, json_field in CSV_TO_JSON_FIELDS.items():
+                        measurement[json_field] = csv_row.get(csv_field)
+
+                    rows.append(measurement)
+
+                return rows
+
+        except UnicodeDecodeError as error:
+            last_error = error
+
+    raise UnicodeDecodeError(
+        "unknown",
+        b"",
+        0,
+        1,
+        f"Could not decode CSV file {csv_path.name}. Last error: {last_error}"
+    )
+
+
+def read_json_measurements(json_path: Path) -> list[dict]:
+    with json_path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    return data["measurements"]
+
+
+def verify_measurements(output_dir: Path) -> list[dict]:
+    """
+    Verifies that measurement data written into JSON matches the raw Keyence CSV.
+
+    Basis:
+    - every .json file in output_dir
+    - matching CSV must have the same base filename
+
+    Returns:
+    - empty list if everything is correct
+    - list of problems if mismatch exists
+    """
+
+    problems = []
+
+    for json_path in output_dir.glob("*.json"):
+        base = json_path.stem
+        csv_path = output_dir / f"{base}.csv"
+
+        if not csv_path.exists():
+            problems.append(
+                {
+                    "base": base,
+                    "problem": "missing_csv",
+                    "details": csv_path.name,
+                }
+            )
+            continue
+
+        json_measurements = read_json_measurements(json_path)
+        csv_measurements = read_csv_measurements(csv_path)
+
+        if len(json_measurements) != len(csv_measurements):
+            problems.append(
+                {
+                    "base": base,
+                    "problem": "measurement_count_mismatch",
+                    "json_count": len(json_measurements),
+                    "csv_count": len(csv_measurements),
+                }
+            )
+            continue
+
+        for index, (json_row, csv_row) in enumerate(
+            zip(json_measurements, csv_measurements),
+            start=1
+        ):
+            for csv_field, json_field in CSV_TO_JSON_FIELDS.items():
+                json_value = normalize_value(json_row.get(json_field), json_field)
+                csv_value = normalize_value(csv_row.get(json_field), json_field)
+
+                if json_value != csv_value:
+                    problems.append(
+                        {
+                            "base": base,
+                            "problem": "value_mismatch",
+                            "row": index,
+                            "field": json_field,
+                            "json_value": json_value,
+                            "csv_value": csv_value,
+                        }
+                    )
+
+    return problems
+
+
+def print_measurement_verification_result(problems: list[dict]) -> None:
+    if not problems:
+        print("Measurement verification OK")
+        return
+
+    print("Measurement verification FAILED")
+
+    for problem in problems:
+        print(f"\nBase: {problem['base']}")
+        print(f"Problem: {problem['problem']}")
+
+        if problem["problem"] == "missing_csv":
+            print(f"Missing CSV: {problem['details']}")
+
+        elif problem["problem"] == "measurement_count_mismatch":
+            print(f"JSON count: {problem['json_count']}")
+            print(f"CSV count: {problem['csv_count']}")
+
+        elif problem["problem"] == "value_mismatch":
+            print(f"Row: {problem['row']}")
+            print(f"Field: {problem['field']}")
+            print(f"JSON value: {problem['json_value']}")
+            print(f"CSV value: {problem['csv_value']}")
