@@ -4,3 +4,4 @@ __pycache__/
 input/
 data_lake_ready/
 no_dmc_related/
+failed_process/
