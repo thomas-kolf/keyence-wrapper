@@ -5,6 +5,7 @@ from validator import validate_group
 from extractor import build_cell_data, write_cell_json
 from file_exporter import export_related_files, build_export_base_name
 from preview_generator import generate_previews
+from export_verifier import verify_exports, print_export_verification_result
 
 
 def main() -> None:
@@ -61,6 +62,9 @@ def main() -> None:
 
     for preview in created_previews:
         print(f"Preview created: {preview.name}")
+
+    problems = verify_exports(output_dir)
+    print_export_verification_result(problems)
 
 
 if __name__ == "__main__":
