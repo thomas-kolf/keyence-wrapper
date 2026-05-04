@@ -38,6 +38,7 @@ def normalize_text(value) -> str | None:
 
     return value
 
+
 def normalize_number(value) -> str | None:
     value = normalize_text(value)
 
@@ -95,7 +96,7 @@ def read_csv_measurements(csv_path: Path) -> list[dict]:
         b"",
         0,
         1,
-        f"Could not decode CSV file {csv_path.name}. Last error: {last_error}"
+        f"Could not decode CSV file {csv_path.name}. Last error: {last_error}",
     )
 
 
@@ -106,22 +107,21 @@ def read_json_measurements(json_path: Path) -> list[dict]:
     return data["measurements"]
 
 
-def verify_measurements(output_dir: Path) -> list[dict]:
+def verify_measurements(output_dir: Path, group_key: str | None = None) -> list[dict]:
     """
     Verifies that measurement data written into JSON matches the raw Keyence CSV.
 
-    Basis:
-    - every .json file in output_dir
-    - matching CSV must have the same base filename
-
-    Returns:
-    - empty list if everything is correct
-    - list of problems if mismatch exists
+    If group_key is given, only JSON files starting with that group_key are checked.
     """
 
     problems = []
 
-    for json_path in output_dir.glob("*.json"):
+    if group_key is None:
+        json_files = list(output_dir.glob("*.json"))
+    else:
+        json_files = list(output_dir.glob(f"{group_key}_*.json"))
+
+    for json_path in json_files:
         base = json_path.stem
         csv_path = output_dir / f"{base}.csv"
 
@@ -151,7 +151,7 @@ def verify_measurements(output_dir: Path) -> list[dict]:
 
         for index, (json_row, csv_row) in enumerate(
             zip(json_measurements, csv_measurements),
-            start=1
+            start=1,
         ):
             for csv_field, json_field in CSV_TO_JSON_FIELDS.items():
                 json_value = normalize_value(json_row.get(json_field), json_field)
@@ -172,12 +172,20 @@ def verify_measurements(output_dir: Path) -> list[dict]:
     return problems
 
 
-def print_measurement_verification_result(problems: list[dict]) -> None:
+def print_measurement_verification_result(
+    problems: list[dict],
+    group_key: str | None = None,
+) -> None:
+    if group_key is None:
+        label = ""
+    else:
+        label = f" for {group_key}"
+
     if not problems:
-        print("Measurement verification OK")
+        print(f"Measurement verification OK{label}")
         return
 
-    print("Measurement verification FAILED")
+    print(f"Measurement verification FAILED{label}")
 
     for problem in problems:
         print(f"\nBase: {problem['base']}")

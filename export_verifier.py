@@ -13,22 +13,19 @@ EXPECTED_SUFFIXES = [
 ]
 
 
-def verify_exports(output_dir: Path) -> list[dict]:
+def verify_exports(output_dir: Path, group_key: str | None = None) -> list[dict]:
     """
     Verifies that every exported cell has all expected output files.
 
-    Basis:
-    - every .json file in output_dir
-    - base filename = json_path.stem
-
-    Returns:
-    - list of problems
-    - empty list means everything is complete
+    If group_key is given, only JSON files starting with that group_key are checked.
     """
 
     problems = []
 
-    json_files = list(output_dir.glob("*.json"))
+    if group_key is None:
+        json_files = list(output_dir.glob("*.json"))
+    else:
+        json_files = list(output_dir.glob(f"{group_key}_*.json"))
 
     for json_path in json_files:
         base = json_path.stem
@@ -51,16 +48,20 @@ def verify_exports(output_dir: Path) -> list[dict]:
     return problems
 
 
-def print_export_verification_result(problems: list[dict]) -> None:
-    """
-    Prints a readable verification result.
-    """
+def print_export_verification_result(
+    problems: list[dict],
+    group_key: str | None = None,
+) -> None:
+    if group_key is None:
+        label = ""
+    else:
+        label = f" for {group_key}"
 
     if not problems:
-        print("Export verification OK")
+        print(f"Export verification OK{label}")
         return
 
-    print("Export verification FAILED")
+    print(f"Export verification FAILED{label}")
 
     for problem in problems:
         print(f"\nBase: {problem['base']}")
