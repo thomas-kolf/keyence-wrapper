@@ -7,6 +7,7 @@ from file_exporter import export_related_files, build_export_base_name
 from preview_generator import generate_previews
 from export_verifier import verify_exports, print_export_verification_result
 from measurement_verifier import verify_measurements, print_measurement_verification_result
+from failed_process_handler import move_failed_exports
 
 
 def main() -> None:
@@ -40,14 +41,14 @@ def main() -> None:
                 output_file = write_cell_json(
                     cell_data=cell_data,
                     output_dir=output_dir,
-                    file_base_name=file_base_name
+                    file_base_name=file_base_name,
                 )
 
                 exported_files = export_related_files(
                     cell_data=cell_data,
                     file_group=files,
                     output_dir=output_dir,
-                    group_key=group_key
+                    group_key=group_key,
                 )
 
                 print(
@@ -72,13 +73,25 @@ def main() -> None:
     print_export_verification_result(export_problems)
 
     if export_problems:
-        raise RuntimeError("Export verification failed. Process stopped.")
+        moved_files = move_failed_exports(
+            output_dir=output_dir,
+            failed_process_dir=failed_dir,
+            problems=export_problems,
+        )
+
+        print(f"Moved failed export files to failed_process: {len(moved_files)}")
 
     measurement_problems = verify_measurements(output_dir)
     print_measurement_verification_result(measurement_problems)
 
     if measurement_problems:
-        raise RuntimeError("Measurement verification failed. Process stopped.")
+        moved_files = move_failed_exports(
+            output_dir=output_dir,
+            failed_process_dir=failed_dir,
+            problems=measurement_problems,
+        )
+
+        print(f"Moved failed measurement files to failed_process: {len(moved_files)}")
 
 
 if __name__ == "__main__":

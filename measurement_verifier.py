@@ -38,7 +38,6 @@ def normalize_text(value) -> str | None:
 
     return value
 
-
 def normalize_number(value) -> str | None:
     value = normalize_text(value)
 
@@ -46,6 +45,11 @@ def normalize_number(value) -> str | None:
         return None
 
     value = value.replace(",", ".")
+
+    # Keyence can use "-" or empty fields as placeholder for no numeric value.
+    # Both should be treated as "no value".
+    if value in {"-", "－"}:
+        return None
 
     number = float(value)
 
