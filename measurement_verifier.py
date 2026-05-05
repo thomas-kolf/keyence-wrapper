@@ -7,7 +7,7 @@ CSV_TO_JSON_FIELDS = {
     "Nummer": "nr",
     "Name Messung": "measurement_name",
     "Elem 1": "elem_1",
-    "": "detail",
+    "detail": "detail",
     "Elem 2": "elem_2",
     "Beurteilung": "classification",
     "Messergebnis": "value",
@@ -67,6 +67,27 @@ def normalize_value(value, field_name: str) -> str | None:
     return normalize_text(value)
 
 
+def normalize_csv_headers(headers: list[str | None]) -> list[str]:
+    normalized_headers = []
+    empty_header_count = 0
+
+    for header in headers:
+        header = normalize_text(header)
+
+        if header is None:
+            empty_header_count += 1
+
+            if empty_header_count == 1:
+                normalized_headers.append("detail")
+            else:
+                normalized_headers.append(f"empty_{empty_header_count}")
+
+        else:
+            normalized_headers.append(header)
+
+    return normalized_headers
+
+
 def read_csv_measurements(csv_path: Path) -> list[dict]:
     encodings = ["utf-8-sig", "cp1252", "latin1"]
 
@@ -75,10 +96,15 @@ def read_csv_measurements(csv_path: Path) -> list[dict]:
     for encoding in encodings:
         try:
             with csv_path.open("r", encoding=encoding, newline="") as file:
-                reader = csv.DictReader(file, delimiter=";")
+                reader = csv.reader(file, delimiter=";")
+
+                raw_headers = next(reader)
+                headers = normalize_csv_headers(raw_headers)
+
                 rows = []
 
-                for csv_row in reader:
+                for raw_row in reader:
+                    csv_row = dict(zip(headers, raw_row))
                     measurement = {}
 
                     for csv_field, json_field in CSV_TO_JSON_FIELDS.items():
