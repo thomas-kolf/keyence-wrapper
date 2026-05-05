@@ -4,14 +4,12 @@ import shutil
 
 def copy_invalid_group(
     files: list[Path],
-    input_dir: Path,
     no_dmc_dir: Path,
 ) -> list[Path]:
     copied_files: list[Path] = []
 
     for source_file in files:
-        relative_path = source_file.relative_to(input_dir)
-        target_file = no_dmc_dir / relative_path
+        target_file = no_dmc_dir / source_file.name
 
         target_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -23,14 +21,12 @@ def copy_invalid_group(
 
 def verify_invalid_group_copy(
     files: list[Path],
-    input_dir: Path,
     no_dmc_dir: Path,
 ) -> list[dict]:
     problems: list[dict] = []
 
     for source_file in files:
-        relative_path = source_file.relative_to(input_dir)
-        target_file = no_dmc_dir / relative_path
+        target_file = no_dmc_dir / source_file.name
 
         if not target_file.exists():
             problems.append(

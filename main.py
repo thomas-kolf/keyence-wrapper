@@ -129,13 +129,11 @@ def main() -> None:
 
             copied_files = copy_invalid_group(
                 files=files,
-                input_dir=input_dir,
                 no_dmc_dir=no_dmc_dir,
             )
 
             copy_problems = verify_invalid_group_copy(
                 files=files,
-                input_dir=input_dir,
                 no_dmc_dir=no_dmc_dir,
             )
 
