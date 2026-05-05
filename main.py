@@ -8,6 +8,11 @@ from preview_generator import generate_previews
 from export_verifier import verify_exports, print_export_verification_result
 from measurement_verifier import verify_measurements, print_measurement_verification_result
 from failed_process_handler import move_failed_group, write_failure_report
+from invalid_group_handler import (
+    copy_invalid_group,
+    verify_invalid_group_copy,
+    write_invalid_group_report,
+)
 
 
 def main() -> None:
@@ -120,7 +125,41 @@ def main() -> None:
                 )
 
         else:
-            print(f"\n{group_key}: INVALID | {result.reason}")
+    print(f"\n{group_key}: INVALID | {result.reason}")
+
+    copied_files = copy_invalid_group(
+        files=files,
+        input_dir=input_dir,
+        no_dmc_dir=no_dmc_dir,
+    )
+
+    copy_problems = verify_invalid_group_copy(
+        files=files,
+        input_dir=input_dir,
+        no_dmc_dir=no_dmc_dir,
+    )
+
+    if copy_problems:
+        write_invalid_group_report(
+            no_dmc_dir=no_dmc_dir,
+            group_key=group_key,
+            reason=result.reason,
+            problems=copy_problems,
+        )
+
+        print(f"Invalid group copy FAILED for {group_key}")
+
+    else:
+        write_invalid_group_report(
+            no_dmc_dir=no_dmc_dir,
+            group_key=group_key,
+            reason=result.reason,
+        )
+
+        print(
+            f"Invalid group copied to no_dmc_related for {group_key}: "
+            f"{len(copied_files)} files"
+        )
 
 
 if __name__ == "__main__":
