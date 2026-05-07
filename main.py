@@ -8,6 +8,7 @@ from preview_generator import generate_previews
 from export_verifier import verify_exports, print_export_verification_result
 from measurement_verifier import verify_measurements, print_measurement_verification_result
 from failed_process_handler import move_failed_group, write_failure_report
+from input_cleanup import cleanup_processed_group
 from invalid_group_handler import (
     copy_invalid_group,
     verify_invalid_group_copy,
@@ -134,6 +135,14 @@ def main() -> None:
                 print(
                     f"Moved failed measurement files to failed_process "
                     f"for {group_key}: {len(moved_files)}"
+                )
+
+            if not export_problems and not measurement_problems:
+                deleted_files = cleanup_processed_group(files)
+
+                print(
+                    f"Deleted processed input files for {group_key}: "
+                    f"{len(deleted_files)}"
                 )
 
         else:
