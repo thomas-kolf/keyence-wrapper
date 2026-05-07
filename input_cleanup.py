@@ -4,6 +4,7 @@ import os
 import stat
 import time
 import re
+import subprocess
 
 
 MAX_LEFTOVER_FOLDER_SIZE_MB = 5
@@ -77,36 +78,50 @@ def _delete_file(file_path: Path) -> bool:
 
 def _remove_folder_with_retry(folder: Path) -> bool:
     last_error = None
+    folder = folder.resolve()
 
     for _ in range(15):
         try:
+            _make_writable(folder)
             folder.rmdir()
             return True
 
-        except PermissionError as error:
-            last_error = error
-            time.sleep(0.5)
-
-        except OSError as error:
+        except Exception as error:
             last_error = error
 
-            try:
-                shutil.rmtree(
-                    folder,
-                    onerror=lambda func, path, exc_info: (
-                        os.chmod(path, stat.S_IWRITE),
-                        func(path),
-                    ),
-                )
+        try:
+            shutil.rmtree(
+                folder,
+                onerror=lambda func, path, exc_info: (
+                    os.chmod(path, stat.S_IWRITE),
+                    func(path),
+                ),
+            )
+            return True
+
+        except Exception as error:
+            last_error = error
+
+        try:
+            subprocess.run(
+                ["attrib", "-R", "-S", "-H", str(folder), "/S", "/D"],
+                shell=True,
+                check=False,
+            )
+
+            subprocess.run(
+                ["cmd", "/c", "rmdir", "/S", "/Q", str(folder)],
+                shell=False,
+                check=False,
+            )
+
+            if not folder.exists():
                 return True
 
-            except PermissionError as error:
-                last_error = error
-                time.sleep(0.5)
+        except Exception as error:
+            last_error = error
 
-            except OSError as error:
-                last_error = error
-                time.sleep(0.5)
+        time.sleep(0.5)
 
     print(f"WARNING: Could not delete folder after retries: {folder} | {last_error}")
     return False
