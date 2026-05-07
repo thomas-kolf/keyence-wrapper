@@ -73,22 +73,40 @@ def _delete_file(file_path: Path) -> bool:
 
 
 def _remove_folder_with_retry(folder: Path) -> bool:
+    last_error = None
+
     for _ in range(10):
         try:
-            shutil.rmtree(
-                folder,
-                onerror=lambda func, path, exc_info: (
-                    os.chmod(path, stat.S_IWRITE),
-                    func(path),
-                ),
-            )
+            # First try simple removal for empty folders
+            folder.rmdir()
             return True
-        except PermissionError:
-            time.sleep(0.3)
-        except OSError as error:
-            print(f"WARNING: Could not delete folder: {folder} | {error}")
-            return False
 
+        except PermissionError as error:
+            last_error = error
+            time.sleep(0.3)
+
+        except OSError as error:
+            last_error = error
+
+            try:
+                shutil.rmtree(
+                    folder,
+                    onerror=lambda func, path, exc_info: (
+                        os.chmod(path, stat.S_IWRITE),
+                        func(path),
+                    ),
+                )
+                return True
+
+            except PermissionError as error:
+                last_error = error
+                time.sleep(0.3)
+
+            except OSError as error:
+                last_error = error
+                time.sleep(0.3)
+
+    print(f"WARNING: Could not delete folder after retries: {folder} | {last_error}")
     return False
 
 
