@@ -3,25 +3,9 @@ from openpyxl import load_workbook
 from openpyxl.drawing.image import Image
 
 
-DEFAULT_IMAGE_WIDTH = 320
-DEFAULT_IMAGE_HEIGHT = 240
+EMBEDDED_IMAGE_WIDTH = 285
+EMBEDDED_IMAGE_HEIGHT = 300
 IMAGE_ANCHOR_CELL = "E7"
-
-
-def _get_existing_image_size(worksheet) -> tuple[int, int]:
-    """
-    Reads the size of the first already existing image in the worksheet.
-    If no image exists, fallback size is used.
-    """
-
-    existing_images = getattr(worksheet, "_images", [])
-
-    if not existing_images:
-        return DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT
-
-    first_image = existing_images[0]
-
-    return int(first_image.width), int(first_image.height)
 
 
 def embed_h_image_in_excel(
@@ -35,7 +19,7 @@ def embed_h_image_in_excel(
     Important:
     - Only modifies the copied output Excel.
     - Does not touch original Keyence input Excel.
-    - Uses the same size as the first image already present in the sheet.
+    - Uses a fixed image size close to the existing Keyence report image.
     """
 
     excel_path = output_dir / f"{file_base_name}.xlsx"
@@ -52,11 +36,9 @@ def embed_h_image_in_excel(
     workbook = load_workbook(excel_path)
     worksheet = workbook.active
 
-    image_width, image_height = _get_existing_image_size(worksheet)
-
     image = Image(image_path)
-    image.width = image_width
-    image.height = image_height
+    image.width = EMBEDDED_IMAGE_WIDTH
+    image.height = EMBEDDED_IMAGE_HEIGHT
 
     worksheet.add_image(image, anchor_cell)
 
