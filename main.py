@@ -28,14 +28,26 @@ def main() -> None:
 
     groups = find_file_groups(input_dir)
 
-    for group_key, files in groups.items():
+    for internal_group_id, group_info in groups.items():
+        recipe_name = group_info["recipe_name"]
+        group_key = group_info["group_key"]
+        files = group_info["files"]
+
+        recipe_output_dir = output_dir / recipe_name
+        recipe_no_dmc_dir = no_dmc_dir / recipe_name
+        recipe_failed_dir = failed_dir / recipe_name
+
+        recipe_output_dir.mkdir(exist_ok=True)
+        recipe_no_dmc_dir.mkdir(exist_ok=True)
+        recipe_failed_dir.mkdir(exist_ok=True)
+
         result = validate_group(files)
 
         if result.valid:
             cell_data_list = build_cell_data(files)
 
             print(
-                f"\n{group_key}: VALID | "
+                f"\n{recipe_name} | {group_key}: VALID | "
                 f"DMC = {result.dmc} | "
                 f"cells = {len(cell_data_list)}"
             )
@@ -45,14 +57,14 @@ def main() -> None:
 
                 output_file = write_cell_json(
                     cell_data=cell_data,
-                    output_dir=output_dir,
+                    output_dir=recipe_output_dir,
                     file_base_name=file_base_name,
                 )
 
                 exported_files = export_related_files(
                     cell_data=cell_data,
                     file_group=files,
-                    output_dir=output_dir,
+                    output_dir=recipe_output_dir,
                     group_key=group_key,
                 )
 
@@ -64,7 +76,7 @@ def main() -> None:
                     f"files={len(exported_files)}"
                 )
 
-            created_previews = generate_previews(output_dir)
+            created_previews = generate_previews(recipe_output_dir)
 
             group_previews = [
                 preview for preview in created_previews
@@ -76,12 +88,12 @@ def main() -> None:
             else:
                 print(f"No new previews needed for {group_key}")
 
-            export_problems = verify_exports(output_dir, group_key)
+            export_problems = verify_exports(recipe_output_dir, group_key)
             print_export_verification_result(export_problems, group_key)
 
             if export_problems:
                 report_path = write_failure_report(
-                    failed_process_dir=failed_dir,
+                    failed_process_dir=recipe_failed_dir,
                     group_key=group_key,
                     verification_type="Export verification failed",
                     problems=export_problems,
@@ -90,8 +102,8 @@ def main() -> None:
                 print(f"Failure report written: {report_path.name}")
 
                 moved_files = move_failed_group(
-                    output_dir=output_dir,
-                    failed_process_dir=failed_dir,
+                    output_dir=recipe_output_dir,
+                    failed_process_dir=recipe_failed_dir,
                     group_key=group_key,
                 )
 
@@ -100,12 +112,12 @@ def main() -> None:
                     f"for {group_key}: {len(moved_files)}"
                 )
 
-            measurement_problems = verify_measurements(output_dir, group_key)
+            measurement_problems = verify_measurements(recipe_output_dir, group_key)
             print_measurement_verification_result(measurement_problems, group_key)
 
             if measurement_problems:
                 report_path = write_failure_report(
-                    failed_process_dir=failed_dir,
+                    failed_process_dir=recipe_failed_dir,
                     group_key=group_key,
                     verification_type="Measurement verification failed",
                     problems=measurement_problems,
@@ -114,8 +126,8 @@ def main() -> None:
                 print(f"Failure report written: {report_path.name}")
 
                 moved_files = move_failed_group(
-                    output_dir=output_dir,
-                    failed_process_dir=failed_dir,
+                    output_dir=recipe_output_dir,
+                    failed_process_dir=recipe_failed_dir,
                     group_key=group_key,
                 )
 
@@ -125,21 +137,21 @@ def main() -> None:
                 )
 
         else:
-            print(f"\n{group_key}: INVALID | {result.reason}")
+            print(f"\n{recipe_name} | {group_key}: INVALID | {result.reason}")
 
             copied_files = copy_invalid_group(
                 files=files,
-                no_dmc_dir=no_dmc_dir,
+                no_dmc_dir=recipe_no_dmc_dir,
             )
 
             copy_problems = verify_invalid_group_copy(
                 files=files,
-                no_dmc_dir=no_dmc_dir,
+                no_dmc_dir=recipe_no_dmc_dir,
             )
 
             if copy_problems:
                 write_invalid_group_report(
-                    no_dmc_dir=no_dmc_dir,
+                    no_dmc_dir=recipe_no_dmc_dir,
                     group_key=group_key,
                     reason=result.reason,
                     problems=copy_problems,
@@ -149,7 +161,7 @@ def main() -> None:
 
             else:
                 write_invalid_group_report(
-                    no_dmc_dir=no_dmc_dir,
+                    no_dmc_dir=recipe_no_dmc_dir,
                     group_key=group_key,
                     reason=result.reason,
                 )
