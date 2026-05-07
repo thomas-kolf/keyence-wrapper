@@ -11,13 +11,6 @@ MAX_LEFTOVER_FOLDER_SIZE_MB = 5
 
 DATE_FOLDER_PATTERN = re.compile(r"^\d{8}$")
 
-REAL_KEYENCE_SUFFIXES = {
-    ".xlsx",
-    ".csv",
-    ".zmr",
-    ".png",
-}
-
 
 def _make_writable(path: Path) -> None:
     os.chmod(path, stat.S_IWRITE)
@@ -34,17 +27,6 @@ def _get_folder_size_bytes(folder: Path) -> int:
                 pass
 
     return total_size
-
-
-def _has_real_keyence_files(folder: Path) -> bool:
-    for file_path in folder.rglob("*"):
-        if not file_path.is_file():
-            continue
-
-        if file_path.suffix.lower() in REAL_KEYENCE_SUFFIXES:
-            return True
-
-    return False
 
 
 def _delete_temp_files(folder: Path) -> list[Path]:
@@ -156,11 +138,10 @@ def cleanup_processed_group(files: list[Path]) -> list[Path]:
     - Deletes only files passed from the normal date folder.
     - Does not touch Statistics folders.
     - Does not touch .zit recipe files.
-    - Tries to delete the date folder afterwards if safe.
+    - Date folder deletion is handled only by cleanup_empty_date_folders().
     """
 
     deleted_files = []
-    affected_folders = set()
 
     for file_path in files:
         file_path = Path(file_path)
@@ -171,20 +152,8 @@ def cleanup_processed_group(files: list[Path]) -> list[Path]:
         if file_path.suffix.lower() == ".zit":
             continue
 
-        affected_folders.add(file_path.parent)
-
         if _delete_file(file_path):
             deleted_files.append(file_path)
-
-    for folder in affected_folders:
-        if _can_delete_leftover_date_folder(folder):
-            folder_size_mb = _get_folder_size_bytes(folder) / (1024 * 1024)
-
-            if _remove_folder_with_retry(folder):
-                print(
-                    f"Deleted leftover input date folder: {folder} "
-                    f"({folder_size_mb:.2f} MB)"
-                )
 
     return deleted_files
 
@@ -199,8 +168,7 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
     Important:
     - Does not touch Statistics.
     - Does not touch .zit recipe files.
-    - Deletes only date folders that contain no real Keyence files
-      and are below MAX_LEFTOVER_FOLDER_SIZE_MB.
+    - Deletes only date folders that are below MAX_LEFTOVER_FOLDER_SIZE_MB.
     """
 
     deleted_folders = []
