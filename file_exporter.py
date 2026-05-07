@@ -53,12 +53,21 @@ def build_export_base_name(cell_data: dict, group_key: str) -> str:
     return f"{group_key}_{product_name}_{cell_dmc}_{device}_{quality}"
 
 
+def find_source_file_in_group(cell_data: dict, file_group: list[Path]) -> Path:
+    source_file_name = Path(cell_data["source_file"]).name
+
+    for file_path in file_group:
+        if file_path.name == source_file_name:
+            return file_path
+
+    return Path(cell_data["source_file"])
+
+
 def find_statistics_file(source_file: Path) -> Path | None:
     """
     Finds the matching .zir file in:
     recipe_folder/Statistics/YYYYMMDD/
 
-    Important:
     The hour in the Statistics filename may differ.
     Therefore we match by:
     - same date
@@ -72,11 +81,10 @@ def find_statistics_file(source_file: Path) -> Path | None:
     statistics_date_folder = recipe_output_folder / "Statistics" / date_folder.name
 
     if not statistics_date_folder.is_dir():
-        print(f"DEBUG: Statistics folder not found: {statistics_date_folder}")
         return None
 
-    # Example source stem:
-    # 20260507_073049_001_VR-5200#BC910105
+    # Example:
+    # 20260507_073049_001_VR-5200#7C020054
     parts = source_file.stem.split("_", maxsplit=3)
 
     if len(parts) != 4:
@@ -96,10 +104,6 @@ def find_statistics_file(source_file: Path) -> Path | None:
         re.IGNORECASE,
     )
 
-    print(f"DEBUG: source_file: {source_file}")
-    print(f"DEBUG: statistics_date_folder: {statistics_date_folder}")
-    print(f"DEBUG: pattern: {pattern.pattern}")
-
     matches = [
         file_path
         for file_path in statistics_date_folder.iterdir()
@@ -113,7 +117,7 @@ def find_statistics_file(source_file: Path) -> Path | None:
 
 
 def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
-    source_file = Path(cell_data["source_file"])
+    source_file = find_source_file_in_group(cell_data, file_group)
     source_stem = source_file.stem
 
     related_files = []
@@ -142,7 +146,7 @@ def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
 
 
 def find_missing_raw_files(cell_data: dict, file_group: list[Path]) -> list[str]:
-    source_file = Path(cell_data["source_file"])
+    source_file = find_source_file_in_group(cell_data, file_group)
     source_stem = source_file.stem
 
     existing_names = {file_path.name for file_path in file_group if file_path.is_file()}
@@ -195,12 +199,14 @@ def export_related_files(
 
     exported_files = []
 
-    source_stem = Path(cell_data["source_file"]).stem
+    source_file = find_source_file_in_group(cell_data, file_group)
+    source_stem = source_file.stem
 
     for source_file in related_files:
         extra_suffix = ""
 
         # Keeps image suffixes like _h and _t
+        # .zir should become exactly {base_name}.zir
         if source_file.suffix.lower() != ".zir":
             if source_file.stem.startswith(source_stem):
                 extra_suffix = source_file.stem[len(source_stem):]
