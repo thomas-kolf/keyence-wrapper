@@ -1,0 +1,341 @@
+# ============================================================
+# MACHINE CONFIGURATION - KEYENCE WRAPPER
+# ============================================================
+#
+# This file contains machine-specific settings for the Keyence wrapper.
+#
+# Important:
+# - Change this file if the Keyence export/report structure changes.
+# - Do NOT change Python code unless the processing logic itself changes.
+# - Text after # is a comment and is ignored by the program.
+# - Keep quotation marks around text values.
+#
+# ============================================================
+
+
+# ============================================================
+# 1. KEYENCE FILE AND FOLDER STRUCTURE
+# ============================================================
+
+[file_structure]
+
+# Keyence recipe file extension.
+# Example:
+#   EMB_Gan_Prüfvorlage.zit
+recipe_file_extension = ".zit"
+
+# Keyence creates an output folder from the recipe name.
+# Example:
+#   Recipe file:   EMB_Gan_Prüfvorlage.zit
+#   Output folder: EMB_Gan_Prüfvorlage_zit
+recipe_output_suffix = "_zit"
+
+# Date folders contain the normal measurement files.
+# Example:
+#   20260507
+#
+# Explanation for non-programmers:
+#   ^      = start of the folder name
+#   \\d{8} = exactly 8 digits
+#   $      = end of the folder name
+#
+# So this only matches folders like:
+#   20260507
+#   20260409
+date_folder_pattern = "^\\d{8}$"
+
+# File pattern used to detect Keyence measurement groups.
+# Example filename:
+#   20260507_073049_001_VR-5200#7C020054.xlsx
+#
+# Explanation:
+#   (?P<date>\\d{8}) = reads the first 8 digits as date
+#   (?P<time>\\d{6}) = reads the next 6 digits as time
+#
+# From this filename:
+#   20260507_073049_001_VR-5200#7C020054.xlsx
+#
+# The program extracts:
+#   date = 20260507
+#   time = 073049
+#   group_key = 20260507_073049
+group_file_pattern = "^(?P<date>\\d{8})_(?P<time>\\d{6})_.*"
+
+# Name of the Keyence statistics folder.
+# This folder contains the .zir files.
+statistics_folder_name = "Statistics"
+
+
+# ============================================================
+# 2. KEYENCE EXCEL METADATA CELLS
+# ============================================================
+
+[excel_metadata]
+
+# Cell where Keyence stores the leadframe DMC / lot number.
+# If DMC is missing here, the whole group becomes invalid.
+dmc_cell = "I17"
+
+# Cell where Keyence stores the raw position / running counter.
+position_cell = "I18"
+
+# Product / recipe / part name from the Keyence report.
+product_name_cell = "I20"
+
+# Device name.
+# Example:
+#   VR-5200#7C020054
+device_cell = "I24"
+
+# Overall result from Keyence.
+# Usually mapped to:
+#   OK      -> IO
+#   n.i.O.  -> NIO
+overall_result_cell = "I25"
+
+
+# ============================================================
+# 3. KEYENCE MEASUREMENT TABLE SETTINGS
+# ============================================================
+
+[measurement_table]
+
+# Row where the measurement table headers are located.
+# Example: row with "Nr.", "Name der Messung", "Messergebnis", etc.
+header_row = 31
+
+# First row containing real measurement values.
+start_row = 32
+
+# Columns used for measurement extraction from Excel.
+# These are Excel column letters.
+first_column = "B"
+last_column = "M"
+
+
+# ============================================================
+# 4. QUALITY MAPPING
+# ============================================================
+
+[quality_mapping]
+
+# Keyence result text mapped to wrapper quality.
+# Do not change the right side unless the wrapper naming should change.
+ok_value = "OK"
+ok_quality = "IO"
+
+not_ok_value = "n.i.O."
+not_ok_quality = "NIO"
+
+unknown_quality = "UNKNOWN"
+
+
+# ============================================================
+# 5. RAW FILE EXPORT SETTINGS
+# ============================================================
+
+[raw_files]
+
+# Normal raw files expected per measured cell.
+# .zir is handled separately because it is stored in Statistics/YYYYMMDD.
+normal_raw_suffixes = [
+    ".xlsx",
+    ".csv",
+    ".zmr",
+    "_h.png",
+    "_t.png",
+]
+
+# Keyence statistics file extension.
+statistics_suffix = ".zir"
+
+# Important:
+# The .zir file can have a different hour in the filename.
+# Example:
+#   Normal file:     20260507_073049_001_VR-5200#7C020054.xlsx
+#   Statistics file: 20260507_143049_001_VR-5200#7C020054.zir
+#
+# The date, minute+second, cell number and device still match.
+allow_statistics_hour_difference = true
+
+
+# ============================================================
+# 6. EXPORT VERIFICATION
+# ============================================================
+
+[export_verification]
+
+# Files that must exist in the standardized output package.
+# If one of these is missing, the whole group fails export verification.
+expected_output_suffixes = [
+    ".json",
+    ".xlsx",
+    ".csv",
+    ".zmr",
+    ".zir",
+    "_h.png",
+    "_t.png",
+    "_h_preview.png",
+    "_t_preview.png",
+]
+
+
+# ============================================================
+# 7. IMAGE PREVIEW SETTINGS
+# ============================================================
+
+[preview]
+
+# Preview image size for Power BI / quick display.
+preview_width = 160
+preview_height = 120
+
+# Source image suffixes for preview generation.
+preview_source_suffixes = [
+    "_h.png",
+    "_t.png",
+]
+
+
+# ============================================================
+# 8. IMAGE EMBEDDING INTO EXCEL REPORT
+# ============================================================
+
+[excel_image_embedding]
+
+# Enable or disable embedding the original _h image into the copied Excel report.
+enabled = true
+
+# Image to embed into the Excel report.
+# Usually the original height image.
+source_image_suffix = "_h.png"
+
+# Position inside the Excel sheet.
+# Example:
+#   E7 means column E, row 7.
+anchor_cell = "E7"
+
+# Embedded image size in Excel.
+# These values are pixel-like openpyxl units.
+image_width = 285
+image_height = 300
+
+
+# ============================================================
+# 9. CSV / JSON MEASUREMENT VERIFICATION
+# ============================================================
+
+[measurement_verification]
+
+# Encodings tried when reading Keyence CSV files.
+# Do not remove entries unless you are sure all CSVs use one encoding.
+csv_encodings = [
+    "utf-8-sig",
+    "cp1252",
+    "latin1",
+]
+
+# Decimal comma handling.
+# Example:
+#   -2,2 becomes -2.2
+decimal_comma_to_dot = true
+
+# Values treated as empty / no numeric value.
+empty_numeric_values = [
+    "",
+    "-",
+]
+
+# Header names used to match CSV columns to JSON fields.
+# If Keyence changes column names, adjust aliases here instead of Python code.
+#
+# Example:
+#   "Messergebnis" in CSV should match "messergebnis" in JSON.
+#
+# Add alternative names if Keyence exports slightly different headers.
+
+[measurement_verification.header_aliases]
+
+nr = [
+    "Nr.",
+    "Nr",
+]
+
+name_messung = [
+    "Name der Messung",
+    "Messung",
+    "Merkmal",
+]
+
+elem_1 = [
+    "Elem. 1",
+    "Element 1",
+]
+
+elem_2 = [
+    "Elem. 2",
+    "Element 2",
+]
+
+beurteilung = [
+    "Beurteilung",
+    "Bewertung",
+]
+
+messergebnis = [
+    "Messergebnis",
+    "Messwert",
+    "Istwert",
+]
+
+einheit = [
+    "Einheit",
+    "Unit",
+]
+
+sollwert = [
+    "Sollwert",
+    "Nominalwert",
+]
+
+obere_toleranz = [
+    "Obere Toleranz",
+    "OT",
+]
+
+untere_toleranz = [
+    "Untere Toleranz",
+    "UT",
+]
+
+kommentar = [
+    "Kommentar",
+    "Comment",
+]
+
+
+# ============================================================
+# 10. INPUT CLEANUP SETTINGS
+# ============================================================
+
+[input_cleanup]
+
+# Delete processed normal input files after all verification checks passed.
+delete_processed_files = true
+
+# Never delete Statistics folders.
+# This must stay true because original .zir files must remain untouched.
+keep_statistics_folder = true
+
+# Never delete .zit recipe files.
+keep_recipe_files = true
+
+# If a date folder only contains small leftover garbage files after processing,
+# it can be deleted at the end of the pipeline.
+max_leftover_folder_size_mb = 5
+
+# Retry count for Windows folder deletion.
+delete_retry_count = 15
+
+# Wait time between retry attempts in seconds.
+delete_retry_wait_seconds = 0.5
