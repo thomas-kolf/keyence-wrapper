@@ -121,9 +121,6 @@ def _can_delete_leftover_date_folder(folder: Path) -> bool:
 
     _delete_temp_files(folder)
 
-    if _has_real_keyence_files(folder):
-        return False
-
     folder_size_mb = _get_folder_size_bytes(folder) / (1024 * 1024)
 
     if folder_size_mb > MAX_LEFTOVER_FOLDER_SIZE_MB:
