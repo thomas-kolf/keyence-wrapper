@@ -6,6 +6,7 @@ EXPECTED_SUFFIXES = [
     ".xlsx",
     ".csv",
     ".zmr",
+    ".zir",
     "_h.png",
     "_t.png",
     "_h_preview.png",
