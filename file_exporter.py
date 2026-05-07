@@ -9,6 +9,7 @@ EXPECTED_RAW_SUFFIXES = [
     ".zmr",
     "_h.png",
     "_t.png",
+    ".zir",
 ]
 
 
@@ -52,6 +53,60 @@ def build_export_base_name(cell_data: dict, group_key: str) -> str:
     return f"{group_key}_{product_name}_{cell_dmc}_{device}_{quality}"
 
 
+def find_statistics_file(source_file: Path) -> Path | None:
+    """
+    Finds the matching .zir file in:
+    recipe_folder/Statistics/YYYYMMDD/
+
+    Important:
+    The hour in the Statistics filename may differ.
+    Therefore we match by:
+    - same date
+    - same minute + second
+    - same cell number
+    - same device part
+    """
+
+    date_folder = source_file.parent
+    recipe_output_folder = date_folder.parent
+    statistics_date_folder = recipe_output_folder / "Statistics" / date_folder.name
+
+    if not statistics_date_folder.is_dir():
+        return None
+
+    # Example source stem:
+    # 20260507_073049_001_VR-5200#BC910105
+    parts = source_file.stem.split("_", maxsplit=3)
+
+    if len(parts) != 4:
+        return None
+
+    source_date = parts[0]
+    source_time = parts[1]
+    source_cell_number = parts[2]
+    source_device_part = parts[3]
+
+    minute_second = source_time[2:]
+
+    pattern = re.compile(
+        rf"^{re.escape(source_date)}_\d{{2}}{re.escape(minute_second)}_"
+        rf"{re.escape(source_cell_number)}_"
+        rf"{re.escape(source_device_part)}\.zir$",
+        re.IGNORECASE,
+    )
+
+    matches = [
+        file_path
+        for file_path in statistics_date_folder.iterdir()
+        if file_path.is_file() and pattern.match(file_path.name)
+    ]
+
+    if not matches:
+        return None
+
+    return sorted(matches)[0]
+
+
 def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
     source_file = Path(cell_data["source_file"])
     source_stem = source_file.stem
@@ -72,6 +127,11 @@ def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
         # example_h.png, example_t.png
         if file_path.stem.startswith(source_stem + "_"):
             related_files.append(file_path)
+
+    statistics_file = find_statistics_file(source_file)
+
+    if statistics_file is not None:
+        related_files.append(statistics_file)
 
     return related_files
 
@@ -95,6 +155,11 @@ def find_missing_raw_files(cell_data: dict, file_group: list[Path]) -> list[str]
     for expected_name in expected_names:
         if expected_name not in existing_names:
             missing_files.append(expected_name)
+
+    statistics_file = find_statistics_file(source_file)
+
+    if statistics_file is None:
+        missing_files.append(f"{source_stem}.zir")
 
     return missing_files
 
@@ -131,8 +196,9 @@ def export_related_files(
         extra_suffix = ""
 
         # Keeps image suffixes like _h and _t
-        if source_file.stem.startswith(source_stem):
-            extra_suffix = source_file.stem[len(source_stem):]
+        if source_file.suffix.lower() != ".zir":
+            if source_file.stem.startswith(source_stem):
+                extra_suffix = source_file.stem[len(source_stem):]
 
         target_file = output_dir / f"{base_name}{extra_suffix}{source_file.suffix}"
 
