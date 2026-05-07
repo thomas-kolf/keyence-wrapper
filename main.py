@@ -201,3 +201,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+#git log --graph --decorate --all --pretty=format:"%C(yellow)%h%Creset  %C(cyan)%ad%Creset  %C(auto)%d%Creset %s" --date=short
