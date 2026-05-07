@@ -72,6 +72,7 @@ def find_statistics_file(source_file: Path) -> Path | None:
     statistics_date_folder = recipe_output_folder / "Statistics" / date_folder.name
 
     if not statistics_date_folder.is_dir():
+        print(f"DEBUG: Statistics folder not found: {statistics_date_folder}")
         return None
 
     # Example source stem:
@@ -94,6 +95,10 @@ def find_statistics_file(source_file: Path) -> Path | None:
         rf"{re.escape(source_device_part)}\.zir$",
         re.IGNORECASE,
     )
+
+    print(f"DEBUG: source_file: {source_file}")
+    print(f"DEBUG: statistics_date_folder: {statistics_date_folder}")
+    print(f"DEBUG: pattern: {pattern.pattern}")
 
     matches = [
         file_path
