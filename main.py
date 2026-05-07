@@ -8,7 +8,7 @@ from preview_generator import generate_previews
 from export_verifier import verify_exports, print_export_verification_result
 from measurement_verifier import verify_measurements, print_measurement_verification_result
 from failed_process_handler import move_failed_group, write_failure_report
-from input_cleanup import cleanup_processed_group
+from input_cleanup import cleanup_processed_group, cleanup_empty_date_folders
 from invalid_group_handler import (
     copy_invalid_group,
     verify_invalid_group_copy,
@@ -179,7 +179,10 @@ def main() -> None:
                     f"Invalid group copied to no_dmc_related for {group_key}: "
                     f"{len(copied_files)} files"
                 )
+    deleted_date_folders = cleanup_empty_date_folders(input_dir)
 
+    if deleted_date_folders:
+        print(f"Final cleanup deleted date folders: {len(deleted_date_folders)}")
 
 if __name__ == "__main__":
     main()
