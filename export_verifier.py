@@ -1,17 +1,9 @@
 from pathlib import Path
 
+from config_loader import machine_config
 
-EXPECTED_SUFFIXES = [
-    ".json",
-    ".xlsx",
-    ".csv",
-    ".zmr",
-    ".zir",
-    "_h.png",
-    "_t.png",
-    "_h_preview.png",
-    "_t_preview.png",
-]
+
+EXPECTED_SUFFIXES = machine_config["export_verification"]["expected_output_suffixes"]
 
 
 def verify_exports(output_dir: Path, group_key: str | None = None) -> list[dict]:
