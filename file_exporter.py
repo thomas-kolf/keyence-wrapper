@@ -2,15 +2,18 @@ from pathlib import Path
 import shutil
 import re
 
+from config_loader import machine_config
 
-EXPECTED_RAW_SUFFIXES = [
-    ".xlsx",
-    ".csv",
-    ".zmr",
-    "_h.png",
-    "_t.png",
-    ".zir",
+
+RAW_FILES_CONFIG = machine_config["raw_files"]
+FILE_STRUCTURE_CONFIG = machine_config["file_structure"]
+
+NORMAL_RAW_SUFFIXES = RAW_FILES_CONFIG["normal_raw_suffixes"]
+STATISTICS_SUFFIX = RAW_FILES_CONFIG["statistics_suffix"]
+ALLOW_STATISTICS_HOUR_DIFFERENCE = RAW_FILES_CONFIG[
+    "allow_statistics_hour_difference"
 ]
+STATISTICS_FOLDER_NAME = FILE_STRUCTURE_CONFIG["statistics_folder_name"]
 
 
 def clean_filename_part(value: str | None) -> str:
@@ -63,13 +66,20 @@ def find_source_file_in_group(cell_data: dict, file_group: list[Path]) -> Path:
     return Path(cell_data["source_file"])
 
 
+def build_expected_raw_file_names(source_stem: str) -> list[str]:
+    return [
+        f"{source_stem}{suffix}"
+        for suffix in NORMAL_RAW_SUFFIXES
+    ]
+
+
 def find_statistics_file(source_file: Path) -> Path | None:
     """
-    Finds the matching .zir file in:
+    Finds the matching statistics file in:
     recipe_folder/Statistics/YYYYMMDD/
 
-    The hour in the Statistics filename may differ.
-    Therefore we match by:
+    For Keyence .zir files, the hour in the Statistics filename may differ.
+    Therefore, if configured, we match by:
     - same date
     - same minute + second
     - same cell number
@@ -78,9 +88,21 @@ def find_statistics_file(source_file: Path) -> Path | None:
 
     date_folder = source_file.parent
     recipe_output_folder = date_folder.parent
-    statistics_date_folder = recipe_output_folder / "Statistics" / date_folder.name
+    statistics_date_folder = (
+        recipe_output_folder
+        / STATISTICS_FOLDER_NAME
+        / date_folder.name
+    )
 
     if not statistics_date_folder.is_dir():
+        return None
+
+    if not ALLOW_STATISTICS_HOUR_DIFFERENCE:
+        exact_file = statistics_date_folder / f"{source_file.stem}{STATISTICS_SUFFIX}"
+
+        if exact_file.is_file():
+            return exact_file
+
         return None
 
     # Example:
@@ -100,7 +122,8 @@ def find_statistics_file(source_file: Path) -> Path | None:
     pattern = re.compile(
         rf"^{re.escape(source_date)}_\d{{2}}{re.escape(minute_second)}_"
         rf"{re.escape(source_cell_number)}_"
-        rf"{re.escape(source_device_part)}\.zir$",
+        rf"{re.escape(source_device_part)}"
+        rf"{re.escape(STATISTICS_SUFFIX)}$",
         re.IGNORECASE,
     )
 
@@ -116,6 +139,11 @@ def find_statistics_file(source_file: Path) -> Path | None:
     return sorted(matches)[0]
 
 
+def has_configured_normal_raw_suffix(file_path: Path, source_stem: str) -> bool:
+    expected_names = build_expected_raw_file_names(source_stem)
+    return file_path.name in expected_names
+
+
 def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
     source_file = find_source_file_in_group(cell_data, file_group)
     source_stem = source_file.stem
@@ -126,15 +154,7 @@ def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
         if not file_path.is_file():
             continue
 
-        # Same base name:
-        # example.xlsx, example.csv, example.zmr
-        if file_path.stem == source_stem:
-            related_files.append(file_path)
-            continue
-
-        # Additional files:
-        # example_h.png, example_t.png
-        if file_path.stem.startswith(source_stem + "_"):
+        if has_configured_normal_raw_suffix(file_path, source_stem):
             related_files.append(file_path)
 
     statistics_file = find_statistics_file(source_file)
@@ -149,15 +169,13 @@ def find_missing_raw_files(cell_data: dict, file_group: list[Path]) -> list[str]
     source_file = find_source_file_in_group(cell_data, file_group)
     source_stem = source_file.stem
 
-    existing_names = {file_path.name for file_path in file_group if file_path.is_file()}
+    existing_names = {
+        file_path.name
+        for file_path in file_group
+        if file_path.is_file()
+    }
 
-    expected_names = [
-        f"{source_stem}.xlsx",
-        f"{source_stem}.csv",
-        f"{source_stem}.zmr",
-        f"{source_stem}_h.png",
-        f"{source_stem}_t.png",
-    ]
+    expected_names = build_expected_raw_file_names(source_stem)
 
     missing_files = []
 
@@ -168,7 +186,7 @@ def find_missing_raw_files(cell_data: dict, file_group: list[Path]) -> list[str]
     statistics_file = find_statistics_file(source_file)
 
     if statistics_file is None:
-        missing_files.append(f"{source_stem}.zir")
+        missing_files.append(f"{source_stem}{STATISTICS_SUFFIX}")
 
     return missing_files
 
@@ -205,9 +223,9 @@ def export_related_files(
     for source_file in related_files:
         extra_suffix = ""
 
-        # Keeps image suffixes like _h and _t
-        # .zir should become exactly {base_name}.zir
-        if source_file.suffix.lower() != ".zir":
+        # Keeps image suffixes like _h and _t.
+        # Statistics files should become exactly {base_name}{STATISTICS_SUFFIX}.
+        if source_file.suffix.lower() != STATISTICS_SUFFIX.lower():
             if source_file.stem.startswith(source_stem):
                 extra_suffix = source_file.stem[len(source_stem):]
 
