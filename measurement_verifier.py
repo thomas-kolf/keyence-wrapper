@@ -2,20 +2,32 @@ import csv
 import json
 from pathlib import Path
 
+from config_loader import machine_config
 
-CSV_TO_JSON_FIELDS = {
-    "Nummer": "nr",
-    "Name Messung": "measurement_name",
-    "Elem 1": "elem_1",
+
+MEASUREMENT_VERIFICATION_CONFIG = machine_config["measurement_verification"]
+HEADER_ALIASES_CONFIG = MEASUREMENT_VERIFICATION_CONFIG["header_aliases"]
+
+CSV_ENCODINGS = MEASUREMENT_VERIFICATION_CONFIG["csv_encodings"]
+DECIMAL_COMMA_TO_DOT = MEASUREMENT_VERIFICATION_CONFIG["decimal_comma_to_dot"]
+EMPTY_NUMERIC_VALUES = set(
+    MEASUREMENT_VERIFICATION_CONFIG["empty_numeric_values"]
+)
+
+
+HEADER_ALIAS_KEYS_TO_JSON_FIELDS = {
+    "nr": "nr",
+    "name_messung": "measurement_name",
+    "elem_1": "elem_1",
     "detail": "detail",
-    "Elem 2": "elem_2",
-    "Beurteilung": "classification",
-    "Messergebnis": "value",
-    "Einheit": "unit",
-    "Sollwert": "target",
-    "Obere Toleranz": "upper_tolerance",
-    "Untere Toleranz": "lower_tolerance",
-    "Kommentar": "kommentar",
+    "elem_2": "elem_2",
+    "beurteilung": "classification",
+    "messergebnis": "value",
+    "einheit": "unit",
+    "sollwert": "target",
+    "obere_toleranz": "upper_tolerance",
+    "untere_toleranz": "lower_tolerance",
+    "kommentar": "kommentar",
 }
 
 
@@ -25,6 +37,21 @@ NUMERIC_FIELDS = {
     "upper_tolerance",
     "lower_tolerance",
 }
+
+
+def build_csv_to_json_fields() -> dict[str, str]:
+    csv_to_json_fields = {}
+
+    for alias_key, json_field in HEADER_ALIAS_KEYS_TO_JSON_FIELDS.items():
+        aliases = HEADER_ALIASES_CONFIG.get(alias_key, [])
+
+        for alias in aliases:
+            csv_to_json_fields[alias] = json_field
+
+    return csv_to_json_fields
+
+
+CSV_TO_JSON_FIELDS = build_csv_to_json_fields()
 
 
 def normalize_text(value) -> str | None:
@@ -45,11 +72,10 @@ def normalize_number(value) -> str | None:
     if value is None:
         return None
 
-    value = value.replace(",", ".")
+    if DECIMAL_COMMA_TO_DOT:
+        value = value.replace(",", ".")
 
-    # Keyence can use "-" or empty fields as placeholder for no numeric value.
-    # Both should be treated as "no value".
-    if value in {"-", "－"}:
+    if value in EMPTY_NUMERIC_VALUES:
         return None
 
     number = float(value)
@@ -89,11 +115,9 @@ def normalize_csv_headers(headers: list[str | None]) -> list[str]:
 
 
 def read_csv_measurements(csv_path: Path) -> list[dict]:
-    encodings = ["utf-8-sig", "cp1252", "latin1"]
-
     last_error = None
 
-    for encoding in encodings:
+    for encoding in CSV_ENCODINGS:
         try:
             with csv_path.open("r", encoding=encoding, newline="") as file:
                 reader = csv.reader(file, delimiter=";")
@@ -135,7 +159,7 @@ def read_json_measurements(json_path: Path) -> list[dict]:
 
 def verify_measurements(output_dir: Path, group_key: str | None = None) -> list[dict]:
     """
-    Verifies that measurement data written into JSON matches the raw Keyence CSV.
+    Verifies that measurement data written into JSON matches the raw CSV.
 
     If group_key is given, only JSON files starting with that group_key are checked.
     """

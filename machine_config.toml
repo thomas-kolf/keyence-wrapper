@@ -260,36 +260,46 @@ decimal_comma_to_dot = true
 empty_numeric_values = [
     "",
     "-",
+    "－",
 ]
 
 # Header names used to match CSV columns to JSON fields.
 # If Keyence changes column names, adjust aliases here instead of Python code.
 #
-# Example:
-#   "Messergebnis" in CSV should match "messergebnis" in JSON.
+# Important:
+# The verifier now uses ONLY these aliases.
+# So every real CSV header name must be listed here.
 #
-# Add alternative names if Keyence exports slightly different headers.
+# The empty column between Elem 1 and Elem 2 is internally named "detail".
 
 [measurement_verification.header_aliases]
 
 nr = [
     "Nr.",
     "Nr",
+    "Nummer",
 ]
 
 name_messung = [
     "Name der Messung",
+    "Name Messung",
     "Messung",
     "Merkmal",
 ]
 
 elem_1 = [
     "Elem. 1",
+    "Elem 1",
     "Element 1",
+]
+
+detail = [
+    "detail",
 ]
 
 elem_2 = [
     "Elem. 2",
+    "Elem 2",
     "Element 2",
 ]
 
