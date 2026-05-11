@@ -78,7 +78,6 @@ def main() -> None:
                 embedded_excel = embed_h_image_in_excel(
                     output_dir=recipe_output_dir,
                     file_base_name=file_base_name,
-                    anchor_cell="E7",
                 )
 
                 if embedded_excel is not None:

@@ -113,10 +113,30 @@ header_row = 31
 # First row containing real measurement values.
 start_row = 32
 
-# Columns used for measurement extraction from Excel.
-# These are Excel column letters.
+# First and last columns of the measurement table.
+# Mostly documentation / boundary information.
 first_column = "B"
 last_column = "M"
+
+
+# Column mapping for measurement extraction from Excel.
+# These keys are the standardized JSON measurement fields.
+# The values are Excel column letters.
+
+[measurement_table.columns]
+
+nr = "B"
+measurement_name = "C"
+elem_1 = "D"
+detail = "E"
+elem_2 = "F"
+kommentar = "G"
+classification = "H"
+value = "I"
+unit = "J"
+target = "K"
+upper_tolerance = "L"
+lower_tolerance = "M"
 
 
 # ============================================================
@@ -197,9 +217,8 @@ expected_output_suffixes = [
 # true  = create preview images
 # false = skip preview image generation
 #
-# Important:
-# If this is set to false, export verification must also be configured
-# so that preview files are no longer expected.
+# If this is set to false, export verification automatically
+# does not require preview files anymore.
 enabled = true
 
 # Preview image size for Power BI / quick display.
@@ -250,6 +269,10 @@ csv_encodings = [
     "cp1252",
     "latin1",
 ]
+
+# CSV delimiter used by the Keyence CSV export.
+# German/European CSV exports commonly use semicolon.
+csv_delimiter = ";"
 
 # Decimal comma handling.
 # Example:

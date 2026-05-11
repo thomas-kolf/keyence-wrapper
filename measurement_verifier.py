@@ -8,6 +8,7 @@ from config_loader import machine_config
 MEASUREMENT_VERIFICATION_CONFIG = machine_config["measurement_verification"]
 
 CSV_ENCODINGS = MEASUREMENT_VERIFICATION_CONFIG["csv_encodings"]
+CSV_DELIMITER = MEASUREMENT_VERIFICATION_CONFIG["csv_delimiter"]
 DECIMAL_COMMA_TO_DOT = MEASUREMENT_VERIFICATION_CONFIG["decimal_comma_to_dot"]
 EMPTY_NUMERIC_VALUES = set(
     MEASUREMENT_VERIFICATION_CONFIG["empty_numeric_values"]
@@ -97,7 +98,7 @@ def read_csv_measurements(csv_path: Path) -> list[dict]:
     for encoding in CSV_ENCODINGS:
         try:
             with csv_path.open("r", encoding=encoding, newline="") as file:
-                reader = csv.reader(file, delimiter=";")
+                reader = csv.reader(file, delimiter=CSV_DELIMITER)
 
                 raw_headers = next(reader)
                 headers = normalize_csv_headers(raw_headers)

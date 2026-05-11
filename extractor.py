@@ -8,6 +8,7 @@ from config_loader import machine_config
 
 EXCEL_METADATA_CONFIG = machine_config["excel_metadata"]
 MEASUREMENT_TABLE_CONFIG = machine_config["measurement_table"]
+MEASUREMENT_COLUMNS_CONFIG = machine_config["measurement_table"]["columns"]
 QUALITY_MAPPING_CONFIG = machine_config["quality_mapping"]
 
 
@@ -124,6 +125,11 @@ def normalize_positions(metadata_list: list[CellMetadata]) -> dict[str, str]:
     return position_mapping
 
 
+def read_measurement_cell(sheet, field_name: str, row: int) -> str | None:
+    column = MEASUREMENT_COLUMNS_CONFIG[field_name]
+    return clean_cell_value(sheet[f"{column}{row}"].value)
+
+
 def extract_measurements_from_excel(excel_file: Path) -> list[Measurement]:
     workbook = load_workbook(excel_file, data_only=True, read_only=True)
 
@@ -134,28 +140,29 @@ def extract_measurements_from_excel(excel_file: Path) -> list[Measurement]:
         row = MEASUREMENT_TABLE_CONFIG["start_row"]
 
         while True:
-            nr = clean_cell_value(
-                sheet[f"{MEASUREMENT_TABLE_CONFIG['first_column']}{row}"].value
-            )
-            measurement_name = clean_cell_value(sheet[f"C{row}"].value)
+            nr = read_measurement_cell(sheet, "nr", row)
 
             if nr is None:
                 break
 
             measurement = Measurement(
                 nr=nr,
-                measurement_name=measurement_name,
-                elem_1=clean_cell_value(sheet[f"D{row}"].value),
-                detail=clean_cell_value(sheet[f"E{row}"].value),
-                elem_2=clean_cell_value(sheet[f"F{row}"].value),
-                kommentar=clean_cell_value(sheet[f"G{row}"].value),
-                classification=clean_cell_value(sheet[f"H{row}"].value),
-                value=clean_cell_value(sheet[f"I{row}"].value),
-                unit=clean_cell_value(sheet[f"J{row}"].value),
-                target=clean_cell_value(sheet[f"K{row}"].value),
-                upper_tolerance=clean_cell_value(sheet[f"L{row}"].value),
-                lower_tolerance=clean_cell_value(
-                    sheet[f"{MEASUREMENT_TABLE_CONFIG['last_column']}{row}"].value
+                measurement_name=read_measurement_cell(
+                    sheet, "measurement_name", row
+                ),
+                elem_1=read_measurement_cell(sheet, "elem_1", row),
+                detail=read_measurement_cell(sheet, "detail", row),
+                elem_2=read_measurement_cell(sheet, "elem_2", row),
+                kommentar=read_measurement_cell(sheet, "kommentar", row),
+                classification=read_measurement_cell(sheet, "classification", row),
+                value=read_measurement_cell(sheet, "value", row),
+                unit=read_measurement_cell(sheet, "unit", row),
+                target=read_measurement_cell(sheet, "target", row),
+                upper_tolerance=read_measurement_cell(
+                    sheet, "upper_tolerance", row
+                ),
+                lower_tolerance=read_measurement_cell(
+                    sheet, "lower_tolerance", row
                 ),
             )
 
