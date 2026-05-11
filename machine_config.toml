@@ -72,12 +72,18 @@ statistics_folder_name = "Statistics"
 
 [excel_metadata]
 
+# Cell where Keyence stores the timestamp.
+timestamp_cell = "I16"
+
 # Cell where Keyence stores the leadframe DMC / lot number.
 # If DMC is missing here, the whole group becomes invalid.
 dmc_cell = "I17"
 
 # Cell where Keyence stores the raw position / running counter.
 position_cell = "I18"
+
+# Cell where Keyence stores the cell / measurement name.
+name_cell = "I19"
 
 # Product / recipe / part name from the Keyence report.
 product_name_cell = "I20"
@@ -185,6 +191,16 @@ expected_output_suffixes = [
 # ============================================================
 
 [preview]
+
+# Enable or disable preview image generation.
+#
+# true  = create preview images
+# false = skip preview image generation
+#
+# Important:
+# If this is set to false, export verification must also be configured
+# so that preview files are no longer expected.
+enabled = true
 
 # Preview image size for Power BI / quick display.
 preview_width = 160

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from config_loader import machine_config
+
 from file_grouping import find_file_groups
 from validator import validate_group
 from extractor import build_cell_data, write_cell_json
@@ -15,6 +17,9 @@ from invalid_group_handler import (
     verify_invalid_group_copy,
     write_invalid_group_report,
 )
+
+
+PREVIEW_ENABLED = machine_config["preview"]["enabled"]
 
 
 def main() -> None:
@@ -90,17 +95,21 @@ def main() -> None:
                     f"{image_status}"
                 )
 
-            created_previews = generate_previews(recipe_output_dir)
+            if PREVIEW_ENABLED:
+                created_previews = generate_previews(recipe_output_dir)
 
-            group_previews = [
-                preview for preview in created_previews
-                if preview.name.startswith(group_key)
-            ]
+                group_previews = [
+                    preview for preview in created_previews
+                    if preview.name.startswith(group_key)
+                ]
 
-            if group_previews:
-                print(f"Previews created for {group_key}: {len(group_previews)}")
+                if group_previews:
+                    print(f"Previews created for {group_key}: {len(group_previews)}")
+                else:
+                    print(f"No new previews needed for {group_key}")
+
             else:
-                print(f"No new previews needed for {group_key}")
+                print(f"Preview generation disabled for {group_key}")
 
             export_problems = verify_exports(recipe_output_dir, group_key)
             print_export_verification_result(export_problems, group_key)
@@ -201,6 +210,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-#git log --graph --decorate --all --pretty=format:"%C(yellow)%h%Creset  %C(cyan)%ad%Creset  %C(auto)%d%Creset %s" --date=short

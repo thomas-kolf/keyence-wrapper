@@ -67,14 +67,18 @@ def read_metadata_from_excel(excel_file: Path) -> CellMetadata:
 
         return CellMetadata(
             source_file=excel_file.name,
-            timestamp=clean_cell_value(sheet["I16"].value),
+            timestamp=clean_cell_value(
+                sheet[EXCEL_METADATA_CONFIG["timestamp_cell"]].value
+            ),
             leadframe_dmc=clean_cell_value(
                 sheet[EXCEL_METADATA_CONFIG["dmc_cell"]].value
             ),
             position=clean_cell_value(
                 sheet[EXCEL_METADATA_CONFIG["position_cell"]].value
             ),
-            name=clean_cell_value(sheet["I19"].value),
+            name=clean_cell_value(
+                sheet[EXCEL_METADATA_CONFIG["name_cell"]].value
+            ),
             product_name=clean_cell_value(
                 sheet[EXCEL_METADATA_CONFIG["product_name_cell"]].value
             ),
