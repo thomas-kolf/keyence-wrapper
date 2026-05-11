@@ -18,19 +18,17 @@ FIELD_MAPPING_CONFIG = MEASUREMENT_VERIFICATION_CONFIG["field_mapping"]
 NUMERIC_FIELDS = set(MEASUREMENT_VERIFICATION_CONFIG["numeric_fields"])
 
 
-def build_csv_to_json_fields() -> dict[str, str]:
-    csv_to_json_fields = {}
+def build_header_to_json_field_mapping(headers: list[str]) -> dict[str, str]:
+    header_to_json_field = {}
 
     for alias_key, json_field in FIELD_MAPPING_CONFIG.items():
         aliases = HEADER_ALIASES_CONFIG.get(alias_key, [])
 
         for alias in aliases:
-            csv_to_json_fields[alias] = json_field
+            if alias in headers:
+                header_to_json_field[alias] = json_field
 
-    return csv_to_json_fields
-
-
-CSV_TO_JSON_FIELDS = build_csv_to_json_fields()
+    return header_to_json_field
 
 
 def normalize_text(value) -> str | None:
@@ -103,6 +101,7 @@ def read_csv_measurements(csv_path: Path) -> list[dict]:
 
                 raw_headers = next(reader)
                 headers = normalize_csv_headers(raw_headers)
+                header_to_json_field = build_header_to_json_field_mapping(headers)
 
                 rows = []
 
@@ -110,8 +109,8 @@ def read_csv_measurements(csv_path: Path) -> list[dict]:
                     csv_row = dict(zip(headers, raw_row))
                     measurement = {}
 
-                    for csv_field, json_field in CSV_TO_JSON_FIELDS.items():
-                        measurement[json_field] = csv_row.get(csv_field)
+                    for csv_header, json_field in header_to_json_field.items():
+                        measurement[json_field] = csv_row.get(csv_header)
 
                     rows.append(measurement)
 
@@ -178,11 +177,13 @@ def verify_measurements(output_dir: Path, group_key: str | None = None) -> list[
             )
             continue
 
+        fields_to_compare = list(FIELD_MAPPING_CONFIG.values())
+
         for index, (json_row, csv_row) in enumerate(
             zip(json_measurements, csv_measurements),
             start=1,
         ):
-            for csv_field, json_field in CSV_TO_JSON_FIELDS.items():
+            for json_field in fields_to_compare:
                 json_value = normalize_value(json_row.get(json_field), json_field)
                 csv_value = normalize_value(csv_row.get(json_field), json_field)
 
