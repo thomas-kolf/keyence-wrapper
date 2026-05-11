@@ -13,6 +13,8 @@ STATISTICS_SUFFIX = RAW_FILES_CONFIG["statistics_suffix"]
 ALLOW_STATISTICS_HOUR_DIFFERENCE = RAW_FILES_CONFIG[
     "allow_statistics_hour_difference"
 ]
+DEVICE_SERIAL_SEPARATOR = RAW_FILES_CONFIG["device_serial_separator"]
+
 STATISTICS_FOLDER_NAME = FILE_STRUCTURE_CONFIG["statistics_folder_name"]
 
 
@@ -42,7 +44,8 @@ def clean_device_name(device: str | None) -> str:
 
     # Example:
     # VR-5200#BC910105 -> VR-5200
-    device = device.split("#")[0]
+    if DEVICE_SERIAL_SEPARATOR and DEVICE_SERIAL_SEPARATOR in device:
+        device = device.split(DEVICE_SERIAL_SEPARATOR)[0]
 
     return clean_filename_part(device)
 

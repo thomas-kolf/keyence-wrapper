@@ -13,6 +13,7 @@ DECIMAL_COMMA_TO_DOT = MEASUREMENT_VERIFICATION_CONFIG["decimal_comma_to_dot"]
 EMPTY_NUMERIC_VALUES = set(
     MEASUREMENT_VERIFICATION_CONFIG["empty_numeric_values"]
 )
+EMPTY_HEADER_FIELD_NAME = MEASUREMENT_VERIFICATION_CONFIG["empty_header_field_name"]
 
 HEADER_ALIASES_CONFIG = MEASUREMENT_VERIFICATION_CONFIG["header_aliases"]
 FIELD_MAPPING_CONFIG = MEASUREMENT_VERIFICATION_CONFIG["field_mapping"]
@@ -82,7 +83,7 @@ def normalize_csv_headers(headers: list[str | None]) -> list[str]:
             empty_header_count += 1
 
             if empty_header_count == 1:
-                normalized_headers.append("detail")
+                normalized_headers.append(EMPTY_HEADER_FIELD_NAME)
             else:
                 normalized_headers.append(f"empty_{empty_header_count}")
 

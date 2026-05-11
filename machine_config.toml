@@ -175,6 +175,11 @@ normal_raw_suffixes = [
 # Keyence statistics file extension.
 statistics_suffix = ".zir"
 
+# Character used to remove the serial number from the device name.
+# Example:
+#   VR-5200#7C020054 -> VR-5200
+device_serial_separator = "#"
+
 # Important:
 # The .zir file can have a different hour in the filename.
 # Example:
@@ -273,6 +278,10 @@ csv_encodings = [
 # CSV delimiter used by the Keyence CSV export.
 # German/European CSV exports commonly use semicolon.
 csv_delimiter = ";"
+
+# Internal name for the first empty CSV header.
+# Keyence has one empty column between Elem 1 and Elem 2.
+empty_header_field_name = "detail"
 
 # Decimal comma handling.
 # Example:
