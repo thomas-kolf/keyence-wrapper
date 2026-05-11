@@ -2,16 +2,24 @@ from pathlib import Path                    # Ordner/Dateien sauber lesen
 from collections import defaultdict         # Dateien gruppieren -> automatisch Listen erstellen
 import re                                   # Regex erkennen (Dateimuster)
 
+from config_loader import machine_config
 
-GROUP_PATTERN = re.compile(r"^(?P<date>\d{8})_(?P<time>\d{6})_.*")
-DATE_FOLDER_PATTERN = re.compile(r"^\d{8}$")
+
+FILE_STRUCTURE_CONFIG = machine_config["file_structure"]
+
+RECIPE_FILE_EXTENSION = FILE_STRUCTURE_CONFIG["recipe_file_extension"]
+RECIPE_OUTPUT_SUFFIX = FILE_STRUCTURE_CONFIG["recipe_output_suffix"]
+STATISTICS_FOLDER_NAME = FILE_STRUCTURE_CONFIG["statistics_folder_name"]
+
+GROUP_PATTERN = re.compile(FILE_STRUCTURE_CONFIG["group_file_pattern"])
+DATE_FOLDER_PATTERN = re.compile(FILE_STRUCTURE_CONFIG["date_folder_pattern"])
 
 
 def find_file_groups(input_dir: Path) -> dict[str, dict]:
     groups = {}
 
-    for recipe_file in input_dir.glob("*.zit"):
-        recipe_name = f"{recipe_file.stem}_zit"
+    for recipe_file in input_dir.glob(f"*{RECIPE_FILE_EXTENSION}"):
+        recipe_name = f"{recipe_file.stem}{RECIPE_OUTPUT_SUFFIX}"
         recipe_output_folder = input_dir / recipe_name
 
         if not recipe_output_folder.is_dir():
@@ -23,7 +31,7 @@ def find_file_groups(input_dir: Path) -> dict[str, dict]:
             if not date_folder.is_dir():
                 continue
 
-            if date_folder.name == "Statistics":
+            if date_folder.name == STATISTICS_FOLDER_NAME:
                 continue
 
             if not DATE_FOLDER_PATTERN.match(date_folder.name):
