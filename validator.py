@@ -2,6 +2,11 @@ from pathlib import Path
 from dataclasses import dataclass
 from openpyxl import load_workbook
 
+from config_loader import machine_config
+
+
+DMC_CELL = machine_config["excel_metadata"]["dmc_cell"]
+
 
 @dataclass
 class ValidationResult:
@@ -23,7 +28,7 @@ def read_dmc_from_excel(excel_file: Path) -> str | None:
 
     try:
         sheet = workbook.active
-        value = sheet["I17"].value
+        value = sheet[DMC_CELL].value
     finally:
         workbook.close()
 
