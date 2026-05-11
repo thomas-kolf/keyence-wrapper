@@ -6,10 +6,22 @@ import time
 import re
 import subprocess
 
+from config_loader import machine_config
 
-MAX_LEFTOVER_FOLDER_SIZE_MB = 5
 
-DATE_FOLDER_PATTERN = re.compile(r"^\d{8}$")
+INPUT_CLEANUP_CONFIG = machine_config["input_cleanup"]
+FILE_STRUCTURE_CONFIG = machine_config["file_structure"]
+
+DELETE_PROCESSED_FILES = INPUT_CLEANUP_CONFIG["delete_processed_files"]
+KEEP_STATISTICS_FOLDER = INPUT_CLEANUP_CONFIG["keep_statistics_folder"]
+KEEP_RECIPE_FILES = INPUT_CLEANUP_CONFIG["keep_recipe_files"]
+MAX_LEFTOVER_FOLDER_SIZE_MB = INPUT_CLEANUP_CONFIG["max_leftover_folder_size_mb"]
+DELETE_RETRY_COUNT = INPUT_CLEANUP_CONFIG["delete_retry_count"]
+DELETE_RETRY_WAIT_SECONDS = INPUT_CLEANUP_CONFIG["delete_retry_wait_seconds"]
+
+STATISTICS_FOLDER_NAME = FILE_STRUCTURE_CONFIG["statistics_folder_name"]
+RECIPE_FILE_EXTENSION = FILE_STRUCTURE_CONFIG["recipe_file_extension"]
+DATE_FOLDER_PATTERN = re.compile(FILE_STRUCTURE_CONFIG["date_folder_pattern"])
 
 
 def _make_writable(path: Path) -> None:
@@ -62,7 +74,7 @@ def _remove_folder_with_retry(folder: Path) -> bool:
     last_error = None
     folder = folder.resolve()
 
-    for _ in range(15):
+    for _ in range(DELETE_RETRY_COUNT):
         try:
             _make_writable(folder)
             folder.rmdir()
@@ -103,7 +115,7 @@ def _remove_folder_with_retry(folder: Path) -> bool:
         except Exception as error:
             last_error = error
 
-        time.sleep(0.5)
+        time.sleep(DELETE_RETRY_WAIT_SECONDS)
 
     print(f"WARNING: Could not delete folder after retries: {folder} | {last_error}")
     return False
@@ -132,24 +144,28 @@ def _can_delete_leftover_date_folder(folder: Path) -> bool:
 
 def cleanup_processed_group(files: list[Path]) -> list[Path]:
     """
-    Deletes processed normal Keyence input files after successful verification.
+    Deletes processed normal input files after successful verification.
 
     Important:
     - Deletes only files passed from the normal date folder.
-    - Does not touch Statistics folders.
-    - Does not touch .zit recipe files.
+    - Can be disabled in machine_config.toml.
+    - Can protect Statistics folders.
+    - Can protect recipe files.
     - Date folder deletion is handled only by cleanup_empty_date_folders().
     """
 
     deleted_files = []
 
+    if not DELETE_PROCESSED_FILES:
+        return deleted_files
+
     for file_path in files:
         file_path = Path(file_path)
 
-        if "Statistics" in file_path.parts:
+        if KEEP_STATISTICS_FOLDER and STATISTICS_FOLDER_NAME in file_path.parts:
             continue
 
-        if file_path.suffix.lower() == ".zit":
+        if KEEP_RECIPE_FILES and file_path.suffix.lower() == RECIPE_FILE_EXTENSION:
             continue
 
         if _delete_file(file_path):
@@ -166,9 +182,8 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
     input/RecipeName_zit/YYYYMMDD/
 
     Important:
-    - Does not touch Statistics.
-    - Does not touch .zit recipe files.
-    - Deletes only date folders that are below MAX_LEFTOVER_FOLDER_SIZE_MB.
+    - Can protect Statistics folders.
+    - Deletes only date folders that are below max_leftover_folder_size_mb.
     """
 
     deleted_folders = []
@@ -178,7 +193,7 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
             continue
 
         for date_folder in recipe_folder.iterdir():
-            if date_folder.name == "Statistics":
+            if KEEP_STATISTICS_FOLDER and date_folder.name == STATISTICS_FOLDER_NAME:
                 continue
 
             if not _can_delete_leftover_date_folder(date_folder):
