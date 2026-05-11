@@ -263,11 +263,41 @@ empty_numeric_values = [
     "－",
 ]
 
+# JSON fields that should be compared numerically.
+# These values refer to the standardized JSON measurement keys.
+numeric_fields = [
+    "value",
+    "target",
+    "upper_tolerance",
+    "lower_tolerance",
+]
+
+
+# Maps config alias groups to standardized JSON measurement fields.
+# Left side  = alias group used below in header_aliases
+# Right side = standardized JSON field in the wrapper artifact
+
+[measurement_verification.field_mapping]
+
+nr = "nr"
+name_messung = "measurement_name"
+elem_1 = "elem_1"
+detail = "detail"
+elem_2 = "elem_2"
+beurteilung = "classification"
+messergebnis = "value"
+einheit = "unit"
+sollwert = "target"
+obere_toleranz = "upper_tolerance"
+untere_toleranz = "lower_tolerance"
+kommentar = "kommentar"
+
+
 # Header names used to match CSV columns to JSON fields.
 # If Keyence changes column names, adjust aliases here instead of Python code.
 #
 # Important:
-# The verifier now uses ONLY these aliases.
+# The verifier uses ONLY these aliases.
 # So every real CSV header name must be listed here.
 #
 # The empty column between Elem 1 and Elem 2 is internally named "detail".

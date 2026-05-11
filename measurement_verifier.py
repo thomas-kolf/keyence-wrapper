@@ -6,7 +6,6 @@ from config_loader import machine_config
 
 
 MEASUREMENT_VERIFICATION_CONFIG = machine_config["measurement_verification"]
-HEADER_ALIASES_CONFIG = MEASUREMENT_VERIFICATION_CONFIG["header_aliases"]
 
 CSV_ENCODINGS = MEASUREMENT_VERIFICATION_CONFIG["csv_encodings"]
 DECIMAL_COMMA_TO_DOT = MEASUREMENT_VERIFICATION_CONFIG["decimal_comma_to_dot"]
@@ -14,35 +13,15 @@ EMPTY_NUMERIC_VALUES = set(
     MEASUREMENT_VERIFICATION_CONFIG["empty_numeric_values"]
 )
 
-
-HEADER_ALIAS_KEYS_TO_JSON_FIELDS = {
-    "nr": "nr",
-    "name_messung": "measurement_name",
-    "elem_1": "elem_1",
-    "detail": "detail",
-    "elem_2": "elem_2",
-    "beurteilung": "classification",
-    "messergebnis": "value",
-    "einheit": "unit",
-    "sollwert": "target",
-    "obere_toleranz": "upper_tolerance",
-    "untere_toleranz": "lower_tolerance",
-    "kommentar": "kommentar",
-}
-
-
-NUMERIC_FIELDS = {
-    "value",
-    "target",
-    "upper_tolerance",
-    "lower_tolerance",
-}
+HEADER_ALIASES_CONFIG = MEASUREMENT_VERIFICATION_CONFIG["header_aliases"]
+FIELD_MAPPING_CONFIG = MEASUREMENT_VERIFICATION_CONFIG["field_mapping"]
+NUMERIC_FIELDS = set(MEASUREMENT_VERIFICATION_CONFIG["numeric_fields"])
 
 
 def build_csv_to_json_fields() -> dict[str, str]:
     csv_to_json_fields = {}
 
-    for alias_key, json_field in HEADER_ALIAS_KEYS_TO_JSON_FIELDS.items():
+    for alias_key, json_field in FIELD_MAPPING_CONFIG.items():
         aliases = HEADER_ALIASES_CONFIG.get(alias_key, [])
 
         for alias in aliases:
