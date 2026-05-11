@@ -147,6 +147,146 @@ def has_configured_normal_raw_suffix(file_path: Path, source_stem: str) -> bool:
     return file_path.name in expected_names
 
 
+def get_source_stem_from_raw_file(file_path: Path) -> str | None:
+    """
+    Detects the original source stem from one normal raw file.
+
+    Examples:
+    example.xlsx  -> example
+    example.csv   -> example
+    example.zmr   -> example
+    example_h.png -> example
+    example_t.png -> example
+    """
+
+    for suffix in sorted(NORMAL_RAW_SUFFIXES, key=len, reverse=True):
+        if file_path.name.endswith(suffix):
+            return file_path.name[:-len(suffix)]
+
+    return None
+
+
+def find_source_stems_in_group(file_group: list[Path]) -> list[str]:
+    source_stems = set()
+
+    for file_path in file_group:
+        if not file_path.is_file():
+            continue
+
+        source_stem = get_source_stem_from_raw_file(file_path)
+
+        if source_stem is not None:
+            source_stems.add(source_stem)
+
+    return sorted(source_stems)
+
+
+def get_existing_statistics_files_for_group(file_group: list[Path]) -> list[Path]:
+    """
+    Finds existing statistics files for all detected source stems.
+    """
+
+    statistics_files = []
+
+    source_stems = find_source_stems_in_group(file_group)
+
+    if not file_group:
+        return statistics_files
+
+    date_folder = Path(file_group[0]).parent
+
+    for source_stem in source_stems:
+        pseudo_source_file = date_folder / f"{source_stem}.xlsx"
+        statistics_file = find_statistics_file(pseudo_source_file)
+
+        if statistics_file is not None:
+            statistics_files.append(statistics_file)
+
+    return statistics_files
+
+
+def get_available_raw_files_for_failed_group(file_group: list[Path]) -> list[Path]:
+    """
+    Returns existing normal group files plus existing statistics files.
+
+    Used when a failed group must be copied to failed_process.
+    """
+
+    available_files = list(file_group)
+    available_files.extend(get_existing_statistics_files_for_group(file_group))
+
+    unique_files = []
+    seen_paths = set()
+
+    for file_path in available_files:
+        resolved_path = Path(file_path).resolve()
+
+        if resolved_path in seen_paths:
+            continue
+
+        seen_paths.add(resolved_path)
+        unique_files.append(Path(file_path))
+
+    return unique_files
+
+
+def verify_raw_group_completeness(file_group: list[Path]) -> list[dict]:
+    """
+    Verifies that every dynamically detected cell/source stem has all expected raw files.
+
+    Important:
+    - Does not assume a fixed number of cells.
+    - 8 cells, 12 cells or 20 cells are all valid if each detected cell is complete.
+    - Checks normal raw files plus configured statistics file.
+    """
+
+    problems = []
+
+    source_stems = find_source_stems_in_group(file_group)
+
+    if not source_stems:
+        problems.append(
+            {
+                "base": "unknown",
+                "missing_files": ["No source files detected in group"],
+            }
+        )
+        return problems
+
+    existing_names = {
+        file_path.name
+        for file_path in file_group
+        if file_path.is_file()
+    }
+
+    date_folder = Path(file_group[0]).parent
+
+    for source_stem in source_stems:
+        missing_files = []
+
+        expected_names = build_expected_raw_file_names(source_stem)
+
+        for expected_name in expected_names:
+            if expected_name not in existing_names:
+                missing_files.append(expected_name)
+
+        pseudo_source_file = date_folder / f"{source_stem}.xlsx"
+        statistics_file = find_statistics_file(pseudo_source_file)
+
+        if statistics_file is None:
+            missing_files.append(f"{source_stem}{STATISTICS_SUFFIX}")
+
+        if missing_files:
+            problems.append(
+                {
+                    "base": source_stem,
+                    "missing_files": missing_files,
+                }
+            )
+
+    return problems
+
+
 def find_related_files(cell_data: dict, file_group: list[Path]) -> list[Path]:
     source_file = find_source_file_in_group(cell_data, file_group)
     source_stem = source_file.stem

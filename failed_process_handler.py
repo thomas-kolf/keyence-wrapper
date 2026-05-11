@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
 
+
 def write_failure_report(
     failed_process_dir: Path,
     group_key: str,
@@ -41,9 +42,14 @@ def write_failure_report(
                 file.write(f"JSON value: {problem.get('json_value')}\n")
                 file.write(f"CSV value: {problem.get('csv_value')}\n")
 
+            elif problem.get("problem") == "copy_missing":
+                file.write("Problem: copy_missing\n")
+                file.write(f"Missing copied file: {problem.get('details')}\n")
+
             file.write("\n")
 
     return report_path
+
 
 def move_failed_group(
     output_dir: Path,
@@ -57,8 +63,6 @@ def move_failed_group(
     Example:
     group_key = 20260409_112101
     moves all files starting with 20260409_112101_
-
-    Input files are not touched.
     """
 
     failed_process_dir.mkdir(parents=True, exist_ok=True)
@@ -74,3 +78,63 @@ def move_failed_group(
         moved_files.append(target_file)
 
     return moved_files
+
+
+def copy_failed_input_group(
+    files: list[Path],
+    failed_process_dir: Path,
+) -> list[Path]:
+    """
+    Copies all existing input files of a failed group to failed_process.
+
+    Important:
+    - This is used when the group is processed but failed.
+    - Input cleanup may happen afterwards.
+    - Existing files are copied; missing files are documented in the report.
+    """
+
+    failed_process_dir.mkdir(parents=True, exist_ok=True)
+
+    copied_files = []
+
+    for source_file in files:
+        source_file = Path(source_file)
+
+        if not source_file.is_file():
+            continue
+
+        target_file = failed_process_dir / source_file.name
+        shutil.copy2(source_file, target_file)
+        copied_files.append(target_file)
+
+    return copied_files
+
+
+def verify_failed_input_group_copy(
+    files: list[Path],
+    failed_process_dir: Path,
+) -> list[dict]:
+    """
+    Verifies that all existing input files were copied to failed_process.
+    """
+
+    problems = []
+
+    for source_file in files:
+        source_file = Path(source_file)
+
+        if not source_file.is_file():
+            continue
+
+        copied_file = failed_process_dir / source_file.name
+
+        if not copied_file.exists():
+            problems.append(
+                {
+                    "base": source_file.stem,
+                    "problem": "copy_missing",
+                    "details": copied_file.name,
+                }
+            )
+
+    return problems
