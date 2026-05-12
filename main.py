@@ -33,6 +33,66 @@ from invalid_group_handler import (
 PREVIEW_ENABLED = machine_config["preview"]["enabled"]
 
 
+def normalize_missing_dmc_for_output(cell_data: dict) -> dict:
+    """
+    Keeps existing behavior for missing DMC naming:
+    only the affected cell gets MISSING_DMC-XX.
+    """
+
+    if cell_data.get("leadframe_dmc") is None:
+        cell_data["cell_dmc"] = f"MISSING_DMC-{cell_data['position']}"
+
+    return cell_data
+
+
+def write_json_and_powerbi_csv_outputs(
+    cell_data_list: list[dict],
+    output_dir: Path,
+    group_key: str,
+) -> list[Path]:
+    created_files = []
+
+    for cell_data in cell_data_list:
+        normalize_missing_dmc_for_output(cell_data)
+
+        file_base_name = build_export_base_name(cell_data, group_key)
+
+        json_file = write_cell_json(
+            cell_data=cell_data,
+            output_dir=output_dir,
+            file_base_name=file_base_name,
+        )
+
+        powerbi_csv_file = create_powerbi_csv_from_json(json_file)
+
+        created_files.append(json_file)
+        created_files.append(powerbi_csv_file)
+
+    return created_files
+
+
+def try_build_cell_data_for_non_ok_group(
+    files: list[Path],
+    group_key: str,
+) -> list[dict]:
+    """
+    Builds cell_data if possible.
+
+    If Excel is missing or metadata extraction is not possible,
+    the existing failed/no_dmc handling must continue unchanged.
+    """
+
+    try:
+        return build_cell_data(files)
+
+    except Exception as error:
+        print(
+            f"Could not create JSON/PowerBI CSV for {group_key}: "
+            f"{type(error).__name__}: {error}"
+        )
+        return []
+
+
 def main() -> None:
     input_dir = Path("input")
     output_dir = Path("data_lake_ready")
@@ -69,6 +129,23 @@ def main() -> None:
 
         if raw_problems:
             print(f"\n{recipe_name} | {group_key}: FAILED | Raw input incomplete")
+
+            cell_data_list = try_build_cell_data_for_non_ok_group(
+                files=files,
+                group_key=group_key,
+            )
+
+            created_metadata_files = write_json_and_powerbi_csv_outputs(
+                cell_data_list=cell_data_list,
+                output_dir=recipe_failed_dir,
+                group_key=group_key,
+            )
+
+            if created_metadata_files:
+                print(
+                    f"Created failed JSON/PowerBI files for {group_key}: "
+                    f"{len(created_metadata_files)}"
+                )
 
             report_path = write_failure_report(
                 failed_process_dir=recipe_failed_dir,
@@ -255,6 +332,23 @@ def main() -> None:
 
         else:
             print(f"\n{recipe_name} | {group_key}: INVALID | {result.reason}")
+
+            cell_data_list = try_build_cell_data_for_non_ok_group(
+                files=files,
+                group_key=group_key,
+            )
+
+            created_metadata_files = write_json_and_powerbi_csv_outputs(
+                cell_data_list=cell_data_list,
+                output_dir=recipe_no_dmc_dir,
+                group_key=group_key,
+            )
+
+            if created_metadata_files:
+                print(
+                    f"Created invalid JSON/PowerBI files for {group_key}: "
+                    f"{len(created_metadata_files)}"
+                )
 
             copied_files = copy_invalid_group(
                 files=files,
