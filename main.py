@@ -11,6 +11,7 @@ from file_exporter import (
     verify_raw_group_completeness,
     get_available_raw_files_for_failed_group,
 )
+from powerbi_csv_creator import create_powerbi_csv_from_json
 from excel_image_embedder import embed_h_image_in_excel
 from preview_generator import generate_previews
 from export_verifier import verify_exports, print_export_verification_result
@@ -136,6 +137,8 @@ def main() -> None:
                     file_base_name=file_base_name,
                 )
 
+                powerbi_csv_file = create_powerbi_csv_from_json(output_file)
+
                 exported_files = export_related_files(
                     cell_data=cell_data,
                     file_group=files,
@@ -158,6 +161,7 @@ def main() -> None:
                     f"quality={cell_data['quality']} | "
                     f"measurements={len(cell_data['measurements'])} | "
                     f"JSON={output_file.name} | "
+                    f"PowerBI_CSV={powerbi_csv_file.name} | "
                     f"files={len(exported_files)} | "
                     f"{image_status}"
                 )

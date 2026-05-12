@@ -20,6 +20,8 @@ class CellMetadata:
     position: str | None
     name: str | None
     product_name: str | None
+    path: str | None
+    processing: str | None
     device: str | None
     overall_result: str | None
 
@@ -82,6 +84,12 @@ def read_metadata_from_excel(excel_file: Path) -> CellMetadata:
             ),
             product_name=clean_cell_value(
                 sheet[EXCEL_METADATA_CONFIG["product_name_cell"]].value
+            ),
+            path=clean_cell_value(
+                sheet[EXCEL_METADATA_CONFIG["path_cell"]].value
+            ),
+            processing=clean_cell_value(
+                sheet[EXCEL_METADATA_CONFIG["processing_cell"]].value
             ),
             device=clean_cell_value(
                 sheet[EXCEL_METADATA_CONFIG["device_cell"]].value
@@ -216,6 +224,8 @@ def build_cell_data(file_group: list[Path]) -> list[dict]:
             "cell_dmc": cell_dmc,
             "name": metadata.name,
             "product_name": metadata.product_name,
+            "path": metadata.path,
+            "processing": metadata.processing,
             "device": metadata.device,
             "overall_result": metadata.overall_result,
             "quality": quality,

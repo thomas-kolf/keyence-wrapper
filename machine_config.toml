@@ -88,6 +88,12 @@ name_cell = "I19"
 # Product / recipe / part name from the Keyence report.
 product_name_cell = "I20"
 
+# Path information from the Keyence report.
+path_cell = "I21"
+
+# Processing information from the Keyence report.
+processing_cell = "I23"
+
 # Device name.
 # Example:
 #   VR-5200#7C020054
@@ -208,6 +214,7 @@ expected_output_suffixes = [
     "_t.png",
     "_h_preview.png",
     "_t_preview.png",
+    "_PowerBI.csv",
 ]
 
 
