@@ -1,6 +1,20 @@
 from pathlib import Path
 import shutil
 
+from extractor import extract_metadata, normalize_positions, determine_quality
+from file_exporter import (
+    build_export_base_name,
+    find_related_files,
+    find_source_file_in_group,
+)
+from config_loader import machine_config
+
+
+RAW_FILES_CONFIG = machine_config["raw_files"]
+STATISTICS_SUFFIX = RAW_FILES_CONFIG["statistics_suffix"]
+
+MISSING_DMC_PLACEHOLDER = "MISSING_DMC"
+
 
 def write_failure_report(
     failed_process_dir: Path,
@@ -51,18 +65,75 @@ def write_failure_report(
     return report_path
 
 
+def build_failed_cell_data_list(files: list[Path]) -> list[dict]:
+    metadata_list = extract_metadata(files)
+    position_mapping = normalize_positions(metadata_list)
+
+    cell_data_list = []
+
+    for metadata in metadata_list:
+        normalized_position = position_mapping[metadata.position]
+        leadframe_dmc = metadata.leadframe_dmc or MISSING_DMC_PLACEHOLDER
+        cell_dmc = f"{leadframe_dmc}-{normalized_position}"
+
+        cell_data = {
+            "source_file": metadata.source_file,
+            "timestamp": metadata.timestamp,
+            "leadframe_dmc": leadframe_dmc,
+            "raw_position": metadata.position,
+            "position": normalized_position,
+            "cell_dmc": cell_dmc,
+            "name": metadata.name,
+            "product_name": metadata.product_name,
+            "device": metadata.device,
+            "overall_result": metadata.overall_result,
+            "quality": determine_quality(metadata),
+        }
+
+        cell_data_list.append(cell_data)
+
+    return cell_data_list
+
+
+def copy_related_files_with_standardized_names(
+    cell_data: dict,
+    files: list[Path],
+    target_dir: Path,
+    group_key: str,
+) -> list[Path]:
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    copied_files = []
+
+    base_name = build_export_base_name(cell_data, group_key)
+    source_file = find_source_file_in_group(cell_data, files)
+    source_stem = source_file.stem
+
+    related_files = find_related_files(cell_data, files)
+
+    for related_file in related_files:
+        extra_suffix = ""
+
+        if related_file.suffix.lower() != STATISTICS_SUFFIX.lower():
+            if related_file.stem.startswith(source_stem):
+                extra_suffix = related_file.stem[len(source_stem):]
+
+        target_file = target_dir / f"{base_name}{extra_suffix}{related_file.suffix}"
+
+        shutil.copy2(related_file, target_file)
+        copied_files.append(target_file)
+
+    return copied_files
+
+
 def move_failed_group(
     output_dir: Path,
     failed_process_dir: Path,
     group_key: str,
 ) -> list[Path]:
     """
-    Moves all existing exported files of a failed group_key
+    Moves all existing standardized exported files of a failed group_key
     from data_lake_ready to failed_process.
-
-    Example:
-    group_key = 20260409_112101
-    moves all files starting with 20260409_112101_
     """
 
     failed_process_dir.mkdir(parents=True, exist_ok=True)
@@ -83,27 +154,46 @@ def move_failed_group(
 def copy_failed_input_group(
     files: list[Path],
     failed_process_dir: Path,
+    group_key: str,
 ) -> list[Path]:
     """
-    Copies all existing input files of a failed group to failed_process.
-
-    Important:
-    - This is used when the group is processed but failed.
-    - Input cleanup may happen afterwards.
-    - Existing files are copied; missing files are documented in the report.
+    Copies existing input files of a failed group to failed_process
+    using the standardized wrapper naming where possible.
     """
 
     failed_process_dir.mkdir(parents=True, exist_ok=True)
 
     copied_files = []
+    copied_source_names = set()
 
+    cell_data_list = build_failed_cell_data_list(files)
+
+    for cell_data in cell_data_list:
+        related_files = find_related_files(cell_data, files)
+
+        for related_file in related_files:
+            copied_source_names.add(related_file.name)
+
+        copied_files.extend(
+            copy_related_files_with_standardized_names(
+                cell_data=cell_data,
+                files=files,
+                target_dir=failed_process_dir,
+                group_key=group_key,
+            )
+        )
+
+    # Fallback: copy files that could not be assigned to an Excel-based cell.
     for source_file in files:
         source_file = Path(source_file)
 
         if not source_file.is_file():
             continue
 
-        target_file = failed_process_dir / source_file.name
+        if source_file.name in copied_source_names:
+            continue
+
+        target_file = failed_process_dir / f"{group_key}_UNSTANDARDIZED_{source_file.name}"
         shutil.copy2(source_file, target_file)
         copied_files.append(target_file)
 
@@ -113,28 +203,23 @@ def copy_failed_input_group(
 def verify_failed_input_group_copy(
     files: list[Path],
     failed_process_dir: Path,
+    group_key: str,
 ) -> list[dict]:
     """
-    Verifies that all existing input files were copied to failed_process.
+    Verifies that failed_process received files for the group.
     """
 
     problems = []
 
-    for source_file in files:
-        source_file = Path(source_file)
+    copied_files = list(failed_process_dir.glob(f"{group_key}_*"))
 
-        if not source_file.is_file():
-            continue
-
-        copied_file = failed_process_dir / source_file.name
-
-        if not copied_file.exists():
-            problems.append(
-                {
-                    "base": source_file.stem,
-                    "problem": "copy_missing",
-                    "details": copied_file.name,
-                }
-            )
+    if not copied_files:
+        problems.append(
+            {
+                "base": group_key,
+                "problem": "copy_missing",
+                "details": f"No files copied for {group_key}",
+            }
+        )
 
     return problems

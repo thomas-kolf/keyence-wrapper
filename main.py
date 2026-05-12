@@ -83,11 +83,13 @@ def main() -> None:
             copied_files = copy_failed_input_group(
                 files=failed_input_files,
                 failed_process_dir=recipe_failed_dir,
+                group_key=group_key,
             )
 
             copy_problems = verify_failed_input_group_copy(
                 files=failed_input_files,
                 failed_process_dir=recipe_failed_dir,
+                group_key=group_key,
             )
 
             if copy_problems:
@@ -253,11 +255,13 @@ def main() -> None:
             copied_files = copy_invalid_group(
                 files=files,
                 no_dmc_dir=recipe_no_dmc_dir,
+                group_key=group_key,
             )
 
             copy_problems = verify_invalid_group_copy(
                 files=files,
                 no_dmc_dir=recipe_no_dmc_dir,
+                group_key=group_key,
             )
 
             if copy_problems:
