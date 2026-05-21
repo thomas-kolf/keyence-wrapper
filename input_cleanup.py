@@ -209,3 +209,87 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
                 )
 
     return deleted_folders
+
+def move_statistics_folders_to_input_root(input_dir: Path) -> list[Path]:
+    """
+    Moves Statistics folders from recipe output folders to input/Statistics.
+
+    Example:
+    input/EMB_Gan_Prüfvorlage_zit/Statistics/YYYYMMDD/
+    -> input/Statistics/YYYYMMDD/
+
+    Existing input/Statistics content is merged.
+    """
+
+    moved_items = []
+
+    target_statistics_root = input_dir / STATISTICS_FOLDER_NAME
+    target_statistics_root.mkdir(parents=True, exist_ok=True)
+
+    for recipe_folder in input_dir.iterdir():
+        if not recipe_folder.is_dir():
+            continue
+
+        if recipe_folder.name == STATISTICS_FOLDER_NAME:
+            continue
+
+        source_statistics_root = recipe_folder / STATISTICS_FOLDER_NAME
+
+        if not source_statistics_root.is_dir():
+            continue
+
+        for source_item in source_statistics_root.iterdir():
+            target_item = target_statistics_root / source_item.name
+
+            if source_item.is_dir():
+                target_item.mkdir(parents=True, exist_ok=True)
+
+                for source_file in source_item.rglob("*"):
+                    if not source_file.is_file():
+                        continue
+
+                    relative_path = source_file.relative_to(source_item)
+                    target_file = target_item / relative_path
+                    target_file.parent.mkdir(parents=True, exist_ok=True)
+
+                    if target_file.exists():
+                        target_file.unlink()
+
+                    shutil.move(str(source_file), str(target_file))
+                    moved_items.append(target_file)
+
+            else:
+                if target_item.exists():
+                    target_item.unlink()
+
+                shutil.move(str(source_item), str(target_item))
+                moved_items.append(target_item)
+
+        _remove_folder_with_retry(source_statistics_root)
+
+    return moved_items
+
+
+def cleanup_empty_recipe_output_folders(input_dir: Path) -> list[Path]:
+    """
+    Deletes empty recipe output folders after normal files were cleaned
+    and Statistics was moved to input/Statistics.
+    """
+
+    deleted_folders = []
+
+    for recipe_folder in input_dir.iterdir():
+        if not recipe_folder.is_dir():
+            continue
+
+        if recipe_folder.name == STATISTICS_FOLDER_NAME:
+            continue
+
+        if any(recipe_folder.iterdir()):
+            continue
+
+        if _remove_folder_with_retry(recipe_folder):
+            deleted_folders.append(recipe_folder)
+            print(f"Final cleanup deleted empty recipe folder: {recipe_folder}")
+
+    return deleted_folders

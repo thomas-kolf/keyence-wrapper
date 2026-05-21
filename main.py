@@ -24,7 +24,12 @@ from failed_process_handler import (
     write_failure_report,
     copy_related_files_with_standardized_names,
 )
-from input_cleanup import cleanup_processed_group, cleanup_empty_date_folders
+from input_cleanup import (
+    cleanup_processed_group,
+    cleanup_empty_date_folders,
+    move_statistics_folders_to_input_root,
+    cleanup_empty_recipe_output_folders,
+)
 from invalid_group_handler import write_invalid_group_report
 
 
