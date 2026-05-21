@@ -71,12 +71,6 @@ def align_cell_positions_to_source_stems(
 ) -> list[dict]:
     """
     Keeps positions stable even if one Excel file is missing.
-
-    Example:
-    available raw stems: 001, 002, 003, ..., 012
-    Excel 001 missing
-    build_cell_data sees only 002-012 and would normalize them to 01-11.
-    This corrects them back to 02-12.
     """
 
     source_stems = find_source_stems_in_group(files)
@@ -189,7 +183,6 @@ def get_existing_files_for_unassigned_source_stem(
     """
     Handles the edge case where raw files exist for a cell,
     but no Excel file exists, so no cell_data can be built.
-    These files cannot be standardized safely.
     """
 
     existing_files = []
@@ -574,6 +567,15 @@ def main() -> None:
 
     if deleted_date_folders:
         print(f"Final cleanup deleted date folders: {len(deleted_date_folders)}")
+
+    moved_statistics_files = move_statistics_folders_to_input_root(input_dir)
+
+    print(f"Moved Statistics files to input/Statistics: {len(moved_statistics_files)}")
+
+    deleted_recipe_folders = cleanup_empty_recipe_output_folders(input_dir)
+
+    if deleted_recipe_folders:
+        print(f"Final cleanup deleted recipe folders: {len(deleted_recipe_folders)}")
 
 
 if __name__ == "__main__":

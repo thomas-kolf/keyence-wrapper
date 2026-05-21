@@ -192,6 +192,9 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
         if not recipe_folder.is_dir():
             continue
 
+        if recipe_folder.name == STATISTICS_FOLDER_NAME:
+            continue
+
         for date_folder in recipe_folder.iterdir():
             if KEEP_STATISTICS_FOLDER and date_folder.name == STATISTICS_FOLDER_NAME:
                 continue
@@ -210,6 +213,7 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
 
     return deleted_folders
 
+
 def move_statistics_folders_to_input_root(input_dir: Path) -> list[Path]:
     """
     Moves Statistics folders from recipe output folders to input/Statistics.
@@ -221,7 +225,7 @@ def move_statistics_folders_to_input_root(input_dir: Path) -> list[Path]:
     Existing input/Statistics content is merged.
     """
 
-    moved_items = []
+    moved_files = []
 
     target_statistics_root = input_dir / STATISTICS_FOLDER_NAME
     target_statistics_root.mkdir(parents=True, exist_ok=True)
@@ -238,41 +242,28 @@ def move_statistics_folders_to_input_root(input_dir: Path) -> list[Path]:
         if not source_statistics_root.is_dir():
             continue
 
-        for source_item in source_statistics_root.iterdir():
-            target_item = target_statistics_root / source_item.name
+        for source_file in source_statistics_root.rglob("*"):
+            if not source_file.is_file():
+                continue
 
-            if source_item.is_dir():
-                target_item.mkdir(parents=True, exist_ok=True)
+            relative_path = source_file.relative_to(source_statistics_root)
+            target_file = target_statistics_root / relative_path
+            target_file.parent.mkdir(parents=True, exist_ok=True)
 
-                for source_file in source_item.rglob("*"):
-                    if not source_file.is_file():
-                        continue
+            if target_file.exists():
+                target_file.unlink()
 
-                    relative_path = source_file.relative_to(source_item)
-                    target_file = target_item / relative_path
-                    target_file.parent.mkdir(parents=True, exist_ok=True)
-
-                    if target_file.exists():
-                        target_file.unlink()
-
-                    shutil.move(str(source_file), str(target_file))
-                    moved_items.append(target_file)
-
-            else:
-                if target_item.exists():
-                    target_item.unlink()
-
-                shutil.move(str(source_item), str(target_item))
-                moved_items.append(target_item)
+            shutil.move(str(source_file), str(target_file))
+            moved_files.append(target_file)
 
         _remove_folder_with_retry(source_statistics_root)
 
-    return moved_items
+    return moved_files
 
 
 def cleanup_empty_recipe_output_folders(input_dir: Path) -> list[Path]:
     """
-    Deletes empty recipe output folders after normal files were cleaned
+    Deletes empty recipe output folders after normal date folders are deleted
     and Statistics was moved to input/Statistics.
     """
 
