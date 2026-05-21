@@ -434,3 +434,22 @@ delete_retry_count = 15
 
 # Wait time between retry attempts in seconds.
 delete_retry_wait_seconds = 0.5
+
+
+# ============================================================
+# 11. MACHINE / OUTPUT PATHS
+# ============================================================
+
+[machine]
+
+# Machine name used for machine-specific output routing.
+# Example output:
+# powerbi_ready/KeyenceVR5200/<recipe_name>/
+machine_name = "KeyenceVR5200"
+
+
+[output_paths]
+
+# Folder used for Power-BI-specific cell CSV files.
+# The wrapper moves *_PowerBI.csv files here after successful checks.
+powerbi_ready_dir = "powerbi_ready"

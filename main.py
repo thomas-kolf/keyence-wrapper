@@ -37,6 +37,18 @@ from invalid_group_handler import write_invalid_group_report
 
 PREVIEW_ENABLED = machine_config["preview"]["enabled"]
 
+MACHINE_NAME = machine_config.get("machine", {}).get(
+    "machine_name",
+    "KeyenceVR5200",
+)
+
+POWERBI_READY_DIR = Path(
+    machine_config.get("output_paths", {}).get(
+        "powerbi_ready_dir",
+        "powerbi_ready",
+    )
+)
+
 
 class TeeLogger:
     """
@@ -256,6 +268,43 @@ def copy_unassigned_failed_files_to_input(
         copied_files.append(target_file)
 
     return copied_files
+
+
+def move_powerbi_csv_files_to_ready(
+    recipe_output_dir: Path,
+    powerbi_ready_root: Path,
+    machine_name: str,
+    recipe_name: str,
+    group_key: str,
+) -> list[Path]:
+    """
+    Moves PowerBI CSV files out of data_lake_ready after successful checks.
+
+    Source:
+    data_lake_ready/<recipe_name>/*_PowerBI.csv
+
+    Target:
+    powerbi_ready/<machine_name>/<recipe_name>/*_PowerBI.csv
+    """
+
+    target_dir = powerbi_ready_root / machine_name / recipe_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    moved_files = []
+
+    for source_file in recipe_output_dir.glob(f"{group_key}_*_PowerBI.csv"):
+        if not source_file.is_file():
+            continue
+
+        target_file = target_dir / source_file.name
+
+        if target_file.exists():
+            target_file.unlink()
+
+        shutil.move(str(source_file), str(target_file))
+        moved_files.append(target_file)
+
+    return moved_files
 
 
 def run_pipeline() -> None:
@@ -574,6 +623,20 @@ def run_pipeline() -> None:
             print(
                 f"Moved failed measurement files flat to input "
                 f"for {group_key}: {len(moved_files)}"
+            )
+
+        if not export_problems and not measurement_problems:
+            moved_powerbi_files = move_powerbi_csv_files_to_ready(
+                recipe_output_dir=recipe_output_dir,
+                powerbi_ready_root=POWERBI_READY_DIR,
+                machine_name=MACHINE_NAME,
+                recipe_name=recipe_name,
+                group_key=group_key,
+            )
+
+            print(
+                f"Moved PowerBI CSV files to powerbi_ready "
+                f"for {group_key}: {len(moved_powerbi_files)}"
             )
 
         deleted_files = cleanup_processed_group(unique_paths(processed_input_files))
