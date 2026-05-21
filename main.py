@@ -13,6 +13,7 @@ from file_exporter import (
     find_related_files,
     find_statistics_file,
     get_source_stem_from_raw_file,
+    find_source_stems_in_group,
 )
 from powerbi_csv_creator import create_powerbi_csv_from_json
 from excel_image_embedder import embed_h_image_in_excel
@@ -57,6 +58,53 @@ def unique_paths(paths: list[Path]) -> list[Path]:
         unique.append(Path(path))
 
     return unique
+
+
+def align_cell_positions_to_source_stems(
+    cell_data_list: list[dict],
+    files: list[Path],
+) -> list[dict]:
+    """
+    Keeps positions stable even if one Excel file is missing.
+
+    Example:
+    available raw stems: 001, 002, 003, ..., 012
+    Excel 001 missing
+    build_cell_data sees only 002-012 and would normalize them to 01-11.
+    This corrects them back to 02-12.
+    """
+
+    source_stems = find_source_stems_in_group(files)
+
+    position_by_source_stem = {
+        source_stem: f"{index:02d}"
+        for index, source_stem in enumerate(source_stems, start=1)
+    }
+
+    for cell_data in cell_data_list:
+        source_stem = Path(cell_data["source_file"]).stem
+        corrected_position = position_by_source_stem.get(source_stem)
+
+        if corrected_position is None:
+            continue
+
+        old_position = cell_data.get("position")
+        cell_data["position"] = corrected_position
+
+        leadframe_dmc = cell_data.get("leadframe_dmc")
+
+        if leadframe_dmc:
+            cell_data["cell_dmc"] = f"{leadframe_dmc}-{corrected_position}"
+        else:
+            cell_data["cell_dmc"] = f"MISSING_DMC-{corrected_position}"
+
+        if old_position != corrected_position:
+            print(
+                f"Position corrected for {source_stem}: "
+                f"{old_position} -> {corrected_position}"
+            )
+
+    return cell_data_list
 
 
 def write_json_and_powerbi_csv_output(
@@ -223,6 +271,11 @@ def main() -> None:
 
         try:
             cell_data_list = build_cell_data(files)
+
+            cell_data_list = align_cell_positions_to_source_stems(
+                cell_data_list=cell_data_list,
+                files=files,
+            )
 
         except Exception as error:
             print(
