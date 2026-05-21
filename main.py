@@ -1,5 +1,7 @@
 from pathlib import Path
 import shutil
+import sys
+from datetime import datetime
 
 from config_loader import machine_config
 
@@ -34,6 +36,24 @@ from invalid_group_handler import write_invalid_group_report
 
 
 PREVIEW_ENABLED = machine_config["preview"]["enabled"]
+
+
+class TeeLogger:
+    """
+    Writes console output to both terminal and log file.
+    """
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, message: str) -> None:
+        for stream in self.streams:
+            stream.write(message)
+            stream.flush()
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()
 
 
 def normalize_missing_dmc_for_output(cell_data: dict) -> dict:
@@ -238,7 +258,7 @@ def copy_unassigned_failed_files_to_input(
     return copied_files
 
 
-def main() -> None:
+def run_pipeline() -> None:
     input_dir = Path("input")
     output_dir = Path("data_lake_ready")
     logs_dir = Path("Logs")
@@ -576,6 +596,38 @@ def main() -> None:
 
     if deleted_recipe_folders:
         print(f"Final cleanup deleted recipe folders: {len(deleted_recipe_folders)}")
+
+
+def main() -> None:
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    success_log_dir = Path("Logs") / "Successful"
+    success_log_dir.mkdir(parents=True, exist_ok=True)
+
+    success_log_file = success_log_dir / f"{run_timestamp}_Success_Report.txt"
+
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
+    with success_log_file.open("w", encoding="utf-8") as log_file:
+        tee_stdout = TeeLogger(original_stdout, log_file)
+        tee_stderr = TeeLogger(original_stderr, log_file)
+
+        sys.stdout = tee_stdout
+        sys.stderr = tee_stderr
+
+        try:
+            print(f"Success log started: {success_log_file}")
+            print("=" * 80)
+
+            run_pipeline()
+
+            print("=" * 80)
+            print(f"Success log written: {success_log_file}")
+
+        finally:
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
 
 
 if __name__ == "__main__":
