@@ -287,7 +287,7 @@ def move_powerbi_csv_files_to_ready(
     powerbi_ready/<machine_name>/<recipe_name>/*_PowerBI.csv
     """
 
-    target_dir = powerbi_ready_root / machine_name / recipe_name
+    target_dir = powerbi_ready_root / recipe_name
     target_dir.mkdir(parents=True, exist_ok=True)
 
     moved_files = []
