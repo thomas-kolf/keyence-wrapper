@@ -21,7 +21,10 @@ from powerbi_csv_creator import create_powerbi_csv_from_json
 from excel_image_embedder import embed_h_image_in_excel
 from preview_generator import generate_previews
 from export_verifier import verify_exports, print_export_verification_result
-from measurement_verifier import verify_measurements, print_measurement_verification_result
+from measurement_verifier import (
+    verify_measurements,
+    print_measurement_verification_result,
+)
 from failed_process_handler import (
     write_failure_report,
     copy_related_files_with_standardized_names,
@@ -29,7 +32,7 @@ from failed_process_handler import (
 from input_cleanup import (
     cleanup_processed_group,
     cleanup_empty_date_folders,
-    move_statistics_folders_to_input_root,
+    move_statistics_folders_to_raw_data,
     cleanup_empty_recipe_output_folders,
 )
 from invalid_group_handler import write_invalid_group_report
@@ -42,10 +45,40 @@ MACHINE_NAME = machine_config.get("machine", {}).get(
     "KeyenceVR5200",
 )
 
+RUNTIME_PATHS = machine_config.get("runtime_paths", {})
+
+INPUT_DIR = Path(
+    RUNTIME_PATHS.get(
+        "input_dir",
+        "input",
+    )
+)
+
+STANDARDIZED_OUTPUT_DIR = Path(
+    RUNTIME_PATHS.get(
+        "standardized_output_dir",
+        "data_lake_ready",
+    )
+)
+
+RAW_DATA_DIR = Path(
+    RUNTIME_PATHS.get(
+        "raw_data_dir",
+        "raw_data",
+    )
+)
+
 POWERBI_READY_DIR = Path(
-    machine_config.get("output_paths", {}).get(
+    RUNTIME_PATHS.get(
         "powerbi_ready_dir",
         "powerbi_ready",
+    )
+)
+
+LOGS_DIR = Path(
+    RUNTIME_PATHS.get(
+        "logs_dir",
+        "Logs",
     )
 )
 
@@ -165,7 +198,7 @@ def copy_incomplete_cell_to_input(
     group_key: str,
 ) -> list[Path]:
     """
-    Copies existing files of one incomplete cell flat to input/.
+    Copies existing files of one incomplete cell flat to the failed target.
     Uses standardized naming where possible.
     """
 
@@ -185,8 +218,8 @@ def move_output_files_for_base(
     base_name: str,
 ) -> list[Path]:
     """
-    Moves all already exported files for one failed exported cell base
-    from data_lake_ready/<recipe>/ to input/.
+    Moves already exported files for one failed cell base
+    from staging into the permanent failed target.
     """
 
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -278,13 +311,14 @@ def move_powerbi_csv_files_to_ready(
     group_key: str,
 ) -> list[Path]:
     """
-    Moves PowerBI CSV files out of data_lake_ready after successful checks.
+    Moves PowerBI CSV files out of the standardized staging folder
+    after successful checks.
 
     Source:
-    data_lake_ready/<recipe_name>/*_PowerBI.csv
+    staging/<recipe_name>/*_PowerBI.csv
 
     Target:
-    powerbi_ready/<machine_name>/<recipe_name>/*_PowerBI.csv
+    ToBeProcessed/<recipe_name>/*_PowerBI.csv
     """
 
     target_dir = powerbi_ready_root / recipe_name
@@ -308,13 +342,15 @@ def move_powerbi_csv_files_to_ready(
 
 
 def run_pipeline() -> None:
-    input_dir = Path("input")
-    output_dir = Path("data_lake_ready")
-    logs_dir = Path("Logs")
+    input_dir = INPUT_DIR
+    output_dir = STANDARDIZED_OUTPUT_DIR
+    raw_data_dir = RAW_DATA_DIR
+    logs_dir = LOGS_DIR
 
-    input_dir.mkdir(exist_ok=True)
-    output_dir.mkdir(exist_ok=True)
-    logs_dir.mkdir(exist_ok=True)
+    input_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    raw_data_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
 
     groups = find_file_groups(input_dir)
 
@@ -328,6 +364,14 @@ def run_pipeline() -> None:
         recipe_name = group_info["recipe_name"]
         group_key = group_info["group_key"]
         files = group_info["files"]
+
+        date_folder_name = group_key[:8]
+
+        failed_output_dir = raw_data_dir / date_folder_name
+        failed_output_dir.mkdir(parents=True, exist_ok=True)
+
+        group_logs_dir = logs_dir / date_folder_name
+        group_logs_dir.mkdir(parents=True, exist_ok=True)
 
         recipe_output_dir = output_dir / recipe_name
         recipe_output_dir.mkdir(parents=True, exist_ok=True)
@@ -360,7 +404,7 @@ def run_pipeline() -> None:
             ]
 
             report_path = write_failure_report(
-                failed_process_dir=logs_dir,
+                failed_process_dir=group_logs_dir,
                 group_key=group_key,
                 verification_type="Cell data creation failed",
                 problems=problems,
@@ -424,7 +468,7 @@ def run_pipeline() -> None:
             failure_problems.extend(unassigned_raw_problems)
 
             report_path = write_failure_report(
-                failed_process_dir=logs_dir,
+                failed_process_dir=group_logs_dir,
                 group_key=group_key,
                 verification_type="Cell-level raw input completeness failed",
                 problems=failure_problems,
@@ -438,7 +482,7 @@ def run_pipeline() -> None:
             copied_files = copy_incomplete_cell_to_input(
                 cell_data=cell_data,
                 files=files,
-                input_dir=input_dir,
+                input_dir=failed_output_dir,
                 group_key=group_key,
             )
 
@@ -447,7 +491,7 @@ def run_pipeline() -> None:
 
             print(
                 f"{cell_data['cell_dmc']} | INCOMPLETE | "
-                f"copied flat to input | files={len(copied_files)}"
+                f"copied flat to Raw_Data/<date> | files={len(copied_files)}"
             )
 
         for problem in unassigned_raw_problems:
@@ -455,7 +499,7 @@ def run_pipeline() -> None:
 
             copied_files = copy_unassigned_failed_files_to_input(
                 files=files,
-                input_dir=input_dir,
+                input_dir=failed_output_dir,
                 group_key=group_key,
                 source_stem=source_stem,
             )
@@ -469,11 +513,13 @@ def run_pipeline() -> None:
 
             print(
                 f"{source_stem} | INCOMPLETE_UNASSIGNED | "
-                f"copied flat to input | files={len(copied_files)}"
+                f"copied flat to Raw_Data/<date> | files={len(copied_files)}"
             )
 
         if not complete_cells:
-            deleted_files = cleanup_processed_group(unique_paths(processed_input_files))
+            deleted_files = cleanup_processed_group(
+                unique_paths(processed_input_files)
+            )
 
             print(
                 f"{recipe_name} | {group_key}: no complete cells exported | "
@@ -490,11 +536,11 @@ def run_pipeline() -> None:
 
         if missing_dmc_cells:
             report_path = write_invalid_group_report(
-                no_dmc_dir=logs_dir,
+                no_dmc_dir=group_logs_dir,
                 group_key=group_key,
                 reason=(
                     "Missing DMC in one or more complete cells. "
-                    "Cells were exported to data_lake_ready with MISSING_DMC-XX naming."
+                    "Cells were exported with MISSING_DMC-XX naming."
                 ),
             )
 
@@ -543,7 +589,8 @@ def run_pipeline() -> None:
             created_previews = generate_previews(recipe_output_dir)
 
             group_previews = [
-                preview for preview in created_previews
+                preview
+                for preview in created_previews
                 if preview.name.startswith(group_key)
             ]
 
@@ -560,7 +607,7 @@ def run_pipeline() -> None:
 
         if export_problems:
             report_path = write_failure_report(
-                failed_process_dir=logs_dir,
+                failed_process_dir=group_logs_dir,
                 group_key=group_key,
                 verification_type="Export verification failed",
                 problems=export_problems,
@@ -580,22 +627,29 @@ def run_pipeline() -> None:
                 moved_files.extend(
                     move_output_files_for_base(
                         output_dir=recipe_output_dir,
-                        target_dir=input_dir,
+                        target_dir=failed_output_dir,
                         base_name=failed_base,
                     )
                 )
 
             print(
-                f"Moved failed exported files flat to input "
+                f"Moved failed exported files flat to Raw_Data/<date> "
                 f"for {group_key}: {len(moved_files)}"
             )
 
-        measurement_problems = verify_measurements(recipe_output_dir, group_key)
-        print_measurement_verification_result(measurement_problems, group_key)
+        measurement_problems = verify_measurements(
+            recipe_output_dir,
+            group_key,
+        )
+
+        print_measurement_verification_result(
+            measurement_problems,
+            group_key,
+        )
 
         if measurement_problems:
             report_path = write_failure_report(
-                failed_process_dir=logs_dir,
+                failed_process_dir=group_logs_dir,
                 group_key=group_key,
                 verification_type="Measurement verification failed",
                 problems=measurement_problems,
@@ -615,13 +669,13 @@ def run_pipeline() -> None:
                 moved_files.extend(
                     move_output_files_for_base(
                         output_dir=recipe_output_dir,
-                        target_dir=input_dir,
+                        target_dir=failed_output_dir,
                         base_name=failed_base,
                     )
                 )
 
             print(
-                f"Moved failed measurement files flat to input "
+                f"Moved failed measurement files flat to Raw_Data/<date> "
                 f"for {group_key}: {len(moved_files)}"
             )
 
@@ -635,11 +689,13 @@ def run_pipeline() -> None:
             )
 
             print(
-                f"Moved PowerBI CSV files to powerbi_ready "
+                f"Moved PowerBI CSV files to ToBeProcessed/<recipe> "
                 f"for {group_key}: {len(moved_powerbi_files)}"
             )
 
-        deleted_files = cleanup_processed_group(unique_paths(processed_input_files))
+        deleted_files = cleanup_processed_group(
+            unique_paths(processed_input_files)
+        )
 
         print(
             f"Deleted processed input files for {group_key}: "
@@ -651,9 +707,15 @@ def run_pipeline() -> None:
     if deleted_date_folders:
         print(f"Final cleanup deleted date folders: {len(deleted_date_folders)}")
 
-    moved_statistics_files = move_statistics_folders_to_input_root(input_dir)
+    moved_statistics_files = move_statistics_folders_to_raw_data(
+        input_dir=input_dir,
+        raw_data_dir=raw_data_dir,
+    )
 
-    print(f"Moved Statistics files to input/Statistics: {len(moved_statistics_files)}")
+    print(
+        f"Moved Statistics files to Raw_Data/<date>/Statistics: "
+        f"{len(moved_statistics_files)}"
+    )
 
     deleted_recipe_folders = cleanup_empty_recipe_output_folders(input_dir)
 
@@ -663,11 +725,20 @@ def run_pipeline() -> None:
 
 def main() -> None:
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_date_folder = datetime.now().strftime("%Y%m%d")
 
-    success_log_dir = Path("Logs") / "Successful"
+    success_log_dir = (
+        LOGS_DIR
+        / log_date_folder
+        / "Successful"
+    )
+
     success_log_dir.mkdir(parents=True, exist_ok=True)
 
-    success_log_file = success_log_dir / f"{run_timestamp}_Success_Report.txt"
+    success_log_file = (
+        success_log_dir
+        / f"{run_timestamp}_Success_Report.txt"
+    )
 
     original_stdout = sys.stdout
     original_stderr = sys.stderr

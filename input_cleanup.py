@@ -63,8 +63,10 @@ def _delete_file(file_path: Path) -> bool:
         _make_writable(file_path)
         file_path.unlink()
         return True
+
     except FileNotFoundError:
         return True
+
     except OSError as error:
         print(f"WARNING: Could not delete input file: {file_path} | {error}")
         return False
@@ -91,6 +93,7 @@ def _remove_folder_with_retry(folder: Path) -> bool:
                     func(path),
                 ),
             )
+
             return True
 
         except Exception as error:
@@ -117,7 +120,11 @@ def _remove_folder_with_retry(folder: Path) -> bool:
 
         time.sleep(DELETE_RETRY_WAIT_SECONDS)
 
-    print(f"WARNING: Could not delete folder after retries: {folder} | {last_error}")
+    print(
+        f"WARNING: Could not delete folder after retries: "
+        f"{folder} | {last_error}"
+    )
+
     return False
 
 
@@ -137,6 +144,7 @@ def _can_delete_leftover_date_folder(folder: Path) -> bool:
             f"WARNING: Date folder not deleted because leftover size is too large: "
             f"{folder} ({folder_size_mb:.2f} MB)"
         )
+
         return False
 
     return True
@@ -147,10 +155,10 @@ def cleanup_processed_group(files: list[Path]) -> list[Path]:
     Deletes processed normal input files after successful verification.
 
     Important:
-    - Deletes only files passed from the normal date folder.
+    - Deletes only files explicitly passed from the working input folder.
     - Can be disabled in machine_config.toml.
-    - Can protect Statistics folders.
-    - Can protect recipe files.
+    - Protects Statistics folders.
+    - Protects recipe files.
     - Date folder deletion is handled only by cleanup_empty_date_folders().
     """
 
@@ -179,11 +187,13 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
     Final cleanup pass after the full pipeline run.
 
     Scans recipe output folders:
-    input/RecipeName_zit/YYYYMMDD/
+
+    ToBeProcessed/<RecipeName_zit>/<YYYYMMDD>/
 
     Important:
-    - Can protect Statistics folders.
-    - Deletes only date folders that are below max_leftover_folder_size_mb.
+    - Statistics folders remain untouched here.
+    - Deletes only normal date folders that are below
+      max_leftover_folder_size_mb.
     """
 
     deleted_folders = []
@@ -206,29 +216,36 @@ def cleanup_empty_date_folders(input_dir: Path) -> list[Path]:
 
             if _remove_folder_with_retry(date_folder):
                 deleted_folders.append(date_folder)
+
                 print(
-                    f"Final cleanup deleted input date folder: {date_folder} "
-                    f"({folder_size_mb:.2f} MB)"
+                    f"Final cleanup deleted input date folder: "
+                    f"{date_folder} ({folder_size_mb:.2f} MB)"
                 )
 
     return deleted_folders
 
 
-def move_statistics_folders_to_input_root(input_dir: Path) -> list[Path]:
+def move_statistics_folders_to_raw_data(
+    input_dir: Path,
+    raw_data_dir: Path,
+) -> list[Path]:
     """
-    Moves Statistics folders from recipe output folders to input/Statistics.
+    Moves original Statistics files from the working input folder into
+    permanent Raw_Data date folders.
 
-    Example:
-    input/EMB_Gan_Prüfvorlage_zit/Statistics/YYYYMMDD/
-    -> input/Statistics/YYYYMMDD/
+    Source:
+    ToBeProcessed/<RecipeName_zit>/Statistics/<YYYYMMDD>/
 
-    Existing input/Statistics content is merged.
+    Target:
+    Raw_Data/<YYYYMMDD>/Statistics/
+
+    Existing target content is merged.
+    If the same filename already exists, it is replaced.
     """
 
     moved_files = []
 
-    target_statistics_root = input_dir / STATISTICS_FOLDER_NAME
-    target_statistics_root.mkdir(parents=True, exist_ok=True)
+    raw_data_dir.mkdir(parents=True, exist_ok=True)
 
     for recipe_folder in input_dir.iterdir():
         if not recipe_folder.is_dir():
@@ -247,13 +264,39 @@ def move_statistics_folders_to_input_root(input_dir: Path) -> list[Path]:
                 continue
 
             relative_path = source_file.relative_to(source_statistics_root)
-            target_file = target_statistics_root / relative_path
+
+            if not relative_path.parts:
+                continue
+
+            date_folder_name = relative_path.parts[0]
+
+            if not DATE_FOLDER_PATTERN.match(date_folder_name):
+                print(
+                    f"WARNING: Statistics file skipped because no valid "
+                    f"date folder was detected: {source_file}"
+                )
+
+                continue
+
+            remaining_path = Path(*relative_path.parts[1:])
+
+            target_statistics_dir = (
+                raw_data_dir
+                / date_folder_name
+                / STATISTICS_FOLDER_NAME
+            )
+
+            target_file = target_statistics_dir / remaining_path
             target_file.parent.mkdir(parents=True, exist_ok=True)
 
             if target_file.exists():
                 target_file.unlink()
 
-            shutil.move(str(source_file), str(target_file))
+            shutil.move(
+                str(source_file),
+                str(target_file),
+            )
+
             moved_files.append(target_file)
 
         _remove_folder_with_retry(source_statistics_root)
@@ -263,8 +306,9 @@ def move_statistics_folders_to_input_root(input_dir: Path) -> list[Path]:
 
 def cleanup_empty_recipe_output_folders(input_dir: Path) -> list[Path]:
     """
-    Deletes empty recipe output folders after normal date folders are deleted
-    and Statistics was moved to input/Statistics.
+    Deletes empty recipe output folders after:
+    - normal processed date folders were deleted
+    - Statistics files were moved to Raw_Data/<date>/Statistics/
     """
 
     deleted_folders = []
@@ -281,6 +325,10 @@ def cleanup_empty_recipe_output_folders(input_dir: Path) -> list[Path]:
 
         if _remove_folder_with_retry(recipe_folder):
             deleted_folders.append(recipe_folder)
-            print(f"Final cleanup deleted empty recipe folder: {recipe_folder}")
+
+            print(
+                f"Final cleanup deleted empty recipe folder: "
+                f"{recipe_folder}"
+            )
 
     return deleted_folders

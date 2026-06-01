@@ -437,19 +437,62 @@ delete_retry_wait_seconds = 0.5
 
 
 # ============================================================
-# 11. MACHINE / OUTPUT PATHS
+# 11. MACHINE
 # ============================================================
 
 [machine]
 
 # Machine name used for machine-specific output routing.
-# Example output:
-# powerbi_ready/KeyenceVR5200/<recipe_name>/
 machine_name = "KeyenceVR5200"
 
 
-[output_paths]
+# ============================================================
+# 12. RUNTIME PATHS
+# ============================================================
+
+[runtime_paths]
+
+# Working input folder processed and cleaned by the wrapper.
+#
+# The central transfer script copies the unchanged machine output here.
+# The wrapper must only process this working copy.
+input_dir = "/mnt/639r-ait/Keyence_VR5200/ToBeProcessed"
+
+# Temporary staging folder for standardized artifacts.
+#
+# The wrapper writes verified standardized files here first.
+# After the wrapper has finished successfully, the external orchestrator:
+#
+# 1. deletes:
+#    Raw_Data/<date>/<recipe_name>/
+#
+# 2. copies the standardized files from this staging folder into:
+#    Raw_Data/<date>/<recipe_name>/
+#
+# This avoids mixing original unstandardized files with standardized files.
+standardized_output_dir = "/mnt/639r-ait/Processing/Wrapper/data_lake_ready"
+
+# Permanent Raw Data root.
+#
+# Incomplete, failed and unassigned files are written directly into:
+# Raw_Data/<date>/
+#
+# Statistics files are moved into:
+# Raw_Data/<date>/Statistics/
+raw_data_dir = "/mnt/639r-ait/Keyence_VR5200/Raw_Data"
 
 # Folder used for Power-BI-specific cell CSV files.
-# The wrapper moves *_PowerBI.csv files here after successful checks.
-powerbi_ready_dir = "powerbi_ready"
+#
+# The wrapper appends the recipe folder automatically.
+#
+# Example:
+# ToBeProcessed/EMB_Gan_Prüfvorlage_zit/*_PowerBI.csv
+powerbi_ready_dir = "/mnt/639r-ait/Keyence_VR5200/ToBeProcessed"
+
+# Central log folder.
+#
+# The wrapper appends the current date folder automatically.
+#
+# Example:
+# Logs/20260506/
+logs_dir = "/mnt/639r-ait/Keyence_VR5200/Logs"
