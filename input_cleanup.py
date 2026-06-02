@@ -231,21 +231,29 @@ def move_statistics_folders_to_raw_data(
 ) -> list[Path]:
     """
     Moves original Statistics files from the working input folder into
-    permanent Raw_Data date folders.
+    the permanent Raw_Data Statistics structure.
 
     Source:
-    ToBeProcessed/<RecipeName_zit>/Statistics/<YYYYMMDD>/
+    toBeProcessed/<RecipeName_zit>/Statistics/<YYYYMMDD>/
 
     Target:
-    Raw_Data/<YYYYMMDD>/Statistics/
+    Raw_Data/Statistics/<YYYYMMDD>/
 
-    Existing target content is merged.
+    Existing date folders are merged.
     If the same filename already exists, it is replaced.
     """
 
     moved_files = []
 
-    raw_data_dir.mkdir(parents=True, exist_ok=True)
+    target_statistics_root = (
+        raw_data_dir
+        / STATISTICS_FOLDER_NAME
+    )
+
+    target_statistics_root.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     for recipe_folder in input_dir.iterdir():
         if not recipe_folder.is_dir():
@@ -254,7 +262,10 @@ def move_statistics_folders_to_raw_data(
         if recipe_folder.name == STATISTICS_FOLDER_NAME:
             continue
 
-        source_statistics_root = recipe_folder / STATISTICS_FOLDER_NAME
+        source_statistics_root = (
+            recipe_folder
+            / STATISTICS_FOLDER_NAME
+        )
 
         if not source_statistics_root.is_dir():
             continue
@@ -263,7 +274,9 @@ def move_statistics_folders_to_raw_data(
             if not source_file.is_file():
                 continue
 
-            relative_path = source_file.relative_to(source_statistics_root)
+            relative_path = source_file.relative_to(
+                source_statistics_root
+            )
 
             if not relative_path.parts:
                 continue
@@ -278,16 +291,20 @@ def move_statistics_folders_to_raw_data(
 
                 continue
 
-            remaining_path = Path(*relative_path.parts[1:])
-
-            target_statistics_dir = (
-                raw_data_dir
-                / date_folder_name
-                / STATISTICS_FOLDER_NAME
+            remaining_path = Path(
+                *relative_path.parts[1:]
             )
 
-            target_file = target_statistics_dir / remaining_path
-            target_file.parent.mkdir(parents=True, exist_ok=True)
+            target_file = (
+                target_statistics_root
+                / date_folder_name
+                / remaining_path
+            )
+
+            target_file.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
 
             if target_file.exists():
                 target_file.unlink()
@@ -297,12 +314,15 @@ def move_statistics_folders_to_raw_data(
                 str(target_file),
             )
 
-            moved_files.append(target_file)
+            moved_files.append(
+                target_file
+            )
 
-        _remove_folder_with_retry(source_statistics_root)
+        _remove_folder_with_retry(
+            source_statistics_root
+        )
 
     return moved_files
-
 
 def cleanup_empty_recipe_output_folders(input_dir: Path) -> list[Path]:
     """
