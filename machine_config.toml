@@ -456,7 +456,7 @@ machine_name = "KeyenceVR5200"
 #
 # The central transfer script copies the unchanged machine output here.
 # The wrapper must only process this working copy.
-input_dir = "/mnt/639r-ait/Keyence_VR5200/ToBeProcessed"
+input_dir = "/mnt/639r-ait/Keyence_VR5200/toBeProcessed"
 
 # Temporary staging folder for standardized artifacts.
 #
@@ -486,8 +486,8 @@ raw_data_dir = "/mnt/639r-ait/Keyence_VR5200/Raw_Data"
 # The wrapper appends the recipe folder automatically.
 #
 # Example:
-# ToBeProcessed/EMB_Gan_Prüfvorlage_zit/*_PowerBI.csv
-powerbi_ready_dir = "/mnt/639r-ait/Keyence_VR5200/ToBeProcessed"
+# toBeProcessed/EMB_Gan_Prüfvorlage_zit/*_PowerBI.csv
+powerbi_ready_dir = "/mnt/639r-ait/Keyence_VR5200/toBeProcessed"
 
 # Central log folder.
 #
