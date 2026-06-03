@@ -452,8 +452,6 @@ machine_name = "KeyenceVR5200"
 
 [runtime_paths]
 
-[runtime_paths]
-
 input_dir = "C:/Users/uiv51287/keyence-wrapper/input"
 
 standardized_output_root_dir = "C:/Users/uiv51287/keyence-wrapper/input"
