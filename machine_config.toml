@@ -452,10 +452,41 @@ machine_name = "KeyenceVR5200"
 
 [runtime_paths]
 
-input_dir = "C:/Users/uiv51287/keyence-wrapper/input"
+# Root folder exposed by the Keyence VR-5200 machine.
+#
+# The wrapper processes this folder directly.
+#
+# Expected incoming structure:
+# V:/
+# ├── random machine files
+# ├── EMB_Gan_Prüfvorlage.zit
+# └── EMB_Gan_Prüfvorlage_zit/
+#     ├── YYYYMMDD/
+#     └── Statistics/
+#         └── YYYYMMDD/
+input_dir = "V:/"
 
-standardized_output_root_dir = "C:/Users/uiv51287/keyence-wrapper/input"
+# Root folder for standardized product folders.
+#
+# This intentionally points to the same machine root.
+#
+# Example:
+# Recipe file:
+#   EMB_Gan_Prüfvorlage.zit
+#
+# Standardized output folder:
+#   V:/EMB_Gan_Prüfvorlage_zit/
+#
+# Future recipe files automatically create their own matching folders.
+standardized_output_root_dir = "V:/"
 
-powerbi_details_dir = "C:/Users/uiv51287/keyence-wrapper/input/Powerbi_Details"
+# Power BI detail CSV output folder.
+#
+# All *_PowerBI.csv files are moved here directly after successful checks.
+powerbi_details_dir = "V:/Powerbi_Details"
 
-logs_dir = "C:/Users/uiv51287/keyence-wrapper/input/Logs"
+# Log root folder.
+#
+# Logs are written into one daily subfolder:
+# V:/Logs/YYYYMMDD/
+logs_dir = "V:/Logs"
