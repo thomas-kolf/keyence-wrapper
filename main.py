@@ -395,6 +395,34 @@ def move_powerbi_csv_files_to_details(
 
     return moved_files
 
+def get_powerbi_details_dir_for_recipe(
+    recipe_name: str,
+) -> Path:
+    """
+    Returns the analytical Power BI output folder for a recipe.
+
+    Default:
+    existing Emb_Gan workflow remains V:/Powerbi_Details.
+
+    Future products can be routed through [powerbi_details_rules]
+    in machine_config.toml.
+    """
+
+    powerbi_details_rules = machine_config.get(
+        "powerbi_details_rules",
+        {},
+    )
+
+    configured_target = powerbi_details_rules.get(
+        recipe_name
+    )
+
+    if configured_target:
+        return Path(
+            configured_target
+        )
+
+    return POWERBI_DETAILS_DIR
 
 def run_pipeline() -> None:
     """
@@ -998,13 +1026,19 @@ def run_pipeline() -> None:
             not export_problems
             and not measurement_problems
         ):
+            target_powerbi_details_dir = (
+    get_powerbi_details_dir_for_recipe(
+        recipe_name
+    )
+)
+
             moved_powerbi_files = (
                 move_powerbi_csv_files_to_details(
                     recipe_output_dir=(
                         recipe_output_dir
                     ),
                     powerbi_details_dir=(
-                        POWERBI_DETAILS_DIR
+                        target_powerbi_details_dir
                     ),
                     group_key=group_key,
                 )
@@ -1012,11 +1046,10 @@ def run_pipeline() -> None:
 
             print(
                 f"Moved Power BI CSV files "
-                f"to Powerbi_Details "
+                f"to {target_powerbi_details_dir} "
                 f"for {group_key}: "
                 f"{len(moved_powerbi_files)}"
-            )
-
+            )   
         deleted_files = (
             cleanup_processed_group(
                 unique_paths(

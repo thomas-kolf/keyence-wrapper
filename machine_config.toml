@@ -490,3 +490,18 @@ powerbi_details_dir = "V:/Powerbi_Details"
 # Logs are written into one daily subfolder:
 # V:/Logs/YYYYMMDD/
 logs_dir = "V:/Logs"
+
+
+# ============================================================
+# 13. POWER BI ANALYTICS OUTPUT RULES
+# ============================================================
+
+[powerbi_details_rules]
+
+# Existing Emb_Gan workflow stays unchanged.
+# Compatible Emb_Gan recipes should still go to V:/Powerbi_Details.
+"EMB_Gan_Prüfvorlage_zit" = "V:/Powerbi_Details"
+
+# Future products get their own analytical details folders.
+"PCB_Recipe_zit" = "V:/Powerbi_Details_PCB"
+"Other_Product_Recipe_zit" = "V:/Powerbi_Details_Other_Product"
