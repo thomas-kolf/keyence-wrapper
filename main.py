@@ -1027,10 +1027,10 @@ def run_pipeline() -> None:
             and not measurement_problems
         ):
             target_powerbi_details_dir = (
-    get_powerbi_details_dir_for_recipe(
-        recipe_name
-    )
-)
+                get_powerbi_details_dir_for_recipe(
+                    recipe_name
+                )
+            )
 
             moved_powerbi_files = (
                 move_powerbi_csv_files_to_details(
