@@ -437,19 +437,71 @@ delete_retry_wait_seconds = 0.5
 
 
 # ============================================================
-# 11. MACHINE / OUTPUT PATHS
+# 11. MACHINE
 # ============================================================
 
 [machine]
 
-# Machine name used for machine-specific output routing.
-# Example output:
-# powerbi_ready/KeyenceVR5200/<recipe_name>/
+# Machine name used for machine-specific configuration.
 machine_name = "KeyenceVR5200"
 
 
-[output_paths]
+# ============================================================
+# 12. RUNTIME PATHS
+# ============================================================
 
-# Folder used for Power-BI-specific cell CSV files.
-# The wrapper moves *_PowerBI.csv files here after successful checks.
-powerbi_ready_dir = "powerbi_ready"
+[runtime_paths]
+
+# Root folder exposed by the Keyence VR-5200 machine.
+#
+# The wrapper processes this folder directly.
+#
+# Expected incoming structure:
+# V:/
+# ├── random machine files
+# ├── EMB_Gan_Prüfvorlage.zit
+# └── EMB_Gan_Prüfvorlage_zit/
+#     ├── YYYYMMDD/
+#     └── Statistics/
+#         └── YYYYMMDD/
+input_dir = "V:/"
+
+# Root folder for standardized product folders.
+#
+# This intentionally points to the same machine root.
+#
+# Example:
+# Recipe file:
+#   EMB_Gan_Prüfvorlage.zit
+#
+# Standardized output folder:
+#   V:/EMB_Gan_Prüfvorlage_zit/
+#
+# Future recipe files automatically create their own matching folders.
+standardized_output_root_dir = "V:/"
+
+# Power BI detail CSV output folder.
+#
+# All *_PowerBI.csv files are moved here directly after successful checks.
+powerbi_details_dir = "V:/Powerbi_Details"
+
+# Log root folder.
+#
+# Logs are written into one daily subfolder:
+# V:/Logs/YYYYMMDD/
+logs_dir = "V:/Logs"
+
+
+# ============================================================
+# 13. POWER BI ANALYTICS OUTPUT RULES
+# ============================================================
+
+[powerbi_details_rules]
+
+# Existing Emb_Gan workflow stays unchanged.
+# Compatible Emb_Gan recipes should still go to V:/Powerbi_Details.
+"EMB_Gan_Prüfvorlage_zit" = "V:/Powerbi_Details"
+
+# Future products get their own analytical details folders.
+"PCB_Recipe_zit" = "V:/Powerbi_Details_PCB"
+"Other_Product_Recipe_zit" = "V:/Powerbi_Details_Other_Product"
