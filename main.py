@@ -309,7 +309,8 @@ def copy_unassigned_failed_files_to_input(
     flat to the machine root.
 
     Example:
-    Excel is missing, but CSV, images or ZMR files exist.
+    Excel is missing, but CSV or ZMR files exist.
+    Optional files are copied if they were detected as related.
     """
 
     copied_files = []
@@ -395,6 +396,7 @@ def move_powerbi_csv_files_to_details(
 
     return moved_files
 
+
 def get_powerbi_details_dir_for_recipe(
     recipe_name: str,
 ) -> Path:
@@ -423,6 +425,7 @@ def get_powerbi_details_dir_for_recipe(
         )
 
     return POWERBI_DETAILS_DIR
+
 
 def run_pipeline() -> None:
     """
@@ -627,7 +630,6 @@ def run_pipeline() -> None:
                         "missing_files": missing_files,
                     }
                 )
-
             else:
                 complete_cells.append(
                     cell_data
@@ -864,7 +866,6 @@ def run_pipeline() -> None:
                 image_status = (
                     "image=embedded"
                 )
-
             else:
                 image_status = (
                     "image=not_embedded"
@@ -903,7 +904,6 @@ def run_pipeline() -> None:
                     f"{group_key}: "
                     f"{len(group_previews)}"
                 )
-
             else:
                 print(
                     f"No new previews needed "
@@ -1049,7 +1049,8 @@ def run_pipeline() -> None:
                 f"to {target_powerbi_details_dir} "
                 f"for {group_key}: "
                 f"{len(moved_powerbi_files)}"
-            )   
+            )
+
         deleted_files = (
             cleanup_processed_group(
                 unique_paths(

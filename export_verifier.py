@@ -13,11 +13,15 @@ PREVIEW_SOURCE_SUFFIXES = PREVIEW_CONFIG["preview_source_suffixes"]
 
 def build_preview_output_suffixes() -> list[str]:
     """
-    Builds expected preview suffixes from configured source image suffixes.
+    Builds expected preview suffixes from configured legacy source image suffixes.
 
     Example:
     _h.png -> _h_preview.png
     _t.png -> _t_preview.png
+
+    Note:
+    Generic image previews are now optional and are created by file_exporter.py.
+    They are not required for export verification.
     """
 
     preview_suffixes = []
@@ -34,7 +38,12 @@ def get_active_expected_suffixes() -> list[str]:
     """
     Returns expected output suffixes.
 
-    If preview generation is disabled, preview files are not expected.
+    The config now contains only required export files:
+    .json, .xlsx, .csv, .zmr and _PowerBI.csv for the template run.
+
+    Optional images, optional previews and optional statistics files are not
+    required for export verification. If such files exist, they are still copied
+    into the artifact package by file_exporter.py.
     """
 
     if PREVIEW_ENABLED:
@@ -50,7 +59,7 @@ def get_active_expected_suffixes() -> list[str]:
 
 def verify_exports(output_dir: Path, group_key: str | None = None) -> list[dict]:
     """
-    Verifies that every exported cell has all expected output files.
+    Verifies that every exported cell has all required output files.
 
     If group_key is given, only JSON files starting with that group_key are checked.
     """

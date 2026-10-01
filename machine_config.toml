@@ -36,7 +36,7 @@ recipe_output_suffix = "_zit"
 #
 # Explanation for non-programmers:
 #   ^      = start of the folder name
-#   \\d{8} = exactly 8 digits
+#   \d{8} = exactly 8 digits
 #   $      = end of the folder name
 #
 # So this only matches folders like:
@@ -49,8 +49,8 @@ date_folder_pattern = "^\\d{8}$"
 #   20260507_073049_001_VR-5200#7C020054.xlsx
 #
 # Explanation:
-#   (?P<date>\\d{8}) = reads the first 8 digits as date
-#   (?P<time>\\d{6}) = reads the next 6 digits as time
+#   (?P<date>\d{8}) = reads the first 8 digits as date
+#   (?P<time>\d{6}) = reads the next 6 digits as time
 #
 # From this filename:
 #   20260507_073049_001_VR-5200#7C020054.xlsx
@@ -62,7 +62,7 @@ date_folder_pattern = "^\\d{8}$"
 group_file_pattern = "^(?P<date>\\d{8})_(?P<time>\\d{6})_.*"
 
 # Name of the Keyence statistics folder.
-# This folder contains the .zir files.
+# This folder contains optional .zir files.
 statistics_folder_name = "Statistics"
 
 
@@ -76,7 +76,6 @@ statistics_folder_name = "Statistics"
 timestamp_cell = "I16"
 
 # Cell where Keyence stores the leadframe DMC / lot number.
-# If DMC is missing here, the whole group becomes invalid.
 dmc_cell = "I17"
 
 # Cell where Keyence stores the raw position / running counter.
@@ -168,18 +167,36 @@ unknown_quality = "UNKNOWN"
 
 [raw_files]
 
-# Normal raw files expected per measured cell.
-# .zir is handled separately because it is stored in Statistics/YYYYMMDD.
+# Required files per measured cell for the normal/template run.
+#
+# These are the only files that decide whether a cell is complete enough
+# for the normal analytical processing.
 normal_raw_suffixes = [
     ".xlsx",
     ".csv",
     ".zmr",
-    "_h.png",
-    "_t.png",
+]
+
+# Optional image file extensions.
+#
+# Any image file that belongs to the same measurement source is copied into
+# the standardized artifact package, receives unified naming, and gets a preview.
+# These files are not required for success.
+optional_image_extensions = [
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".bmp",
+    ".tif",
+    ".tiff",
+    ".webp",
 ]
 
 # Keyence statistics file extension.
+# Statistics files are optional. If found, they are copied into the artifact
+# package using unified naming. Missing statistics files do not cause failure.
 statistics_suffix = ".zir"
+statistics_required = false
 
 # Character used to remove the serial number from the device name.
 # Example:
@@ -203,17 +220,15 @@ allow_statistics_hour_difference = true
 [export_verification]
 
 # Files that must exist in the standardized output package.
-# If one of these is missing, the whole group fails export verification.
+#
+# Optional images, previews and statistics files are intentionally NOT listed.
+# They are exported when available, but missing optional files must not fail
+# the template wrapper run.
 expected_output_suffixes = [
     ".json",
     ".xlsx",
     ".csv",
     ".zmr",
-    ".zir",
-    "_h.png",
-    "_t.png",
-    "_h_preview.png",
-    "_t_preview.png",
     "_PowerBI.csv",
 ]
 
@@ -226,18 +241,19 @@ expected_output_suffixes = [
 
 # Enable or disable preview image generation.
 #
-# true  = create preview images
+# true  = create preview images for exported optional images
 # false = skip preview image generation
-#
-# If this is set to false, export verification automatically
-# does not require preview files anymore.
 enabled = true
 
 # Preview image size for Power BI / quick display.
 preview_width = 160
 preview_height = 120
 
-# Source image suffixes for preview generation.
+# Legacy preview source suffixes.
+#
+# Generic image previews are now created directly for every exported image by
+# file_exporter.py. These legacy suffixes can stay here for compatibility with
+# the existing preview_generator module.
 preview_source_suffixes = [
     "_h.png",
     "_t.png",
@@ -251,6 +267,8 @@ preview_source_suffixes = [
 [excel_image_embedding]
 
 # Enable or disable embedding the original _h image into the copied Excel report.
+#
+# This is optional. If no matching _h image exists, the wrapper continues.
 enabled = true
 
 # Image to embed into the Excel report.
