@@ -482,7 +482,7 @@ machine_name = "KeyenceVR5200"
 #     ├── YYYYMMDD/
 #     └── Statistics/
 #         └── YYYYMMDD/
-input_dir = "V:/"
+input_dir = 'C:\Users\uiv51287\OneDrive - Schaeffler\Desktop\wrapper_test_changes'
 
 # Root folder for standardized product folders.
 #
@@ -496,18 +496,18 @@ input_dir = "V:/"
 #   V:/EMB_Gan_Prüfvorlage_zit/
 #
 # Future recipe files automatically create their own matching folders.
-standardized_output_root_dir = "V:/"
+standardized_output_root_dir = 'C:\Users\uiv51287\OneDrive - Schaeffler\Desktop\wrapper_test_changes'
 
 # Power BI detail CSV output folder.
 #
 # All *_PowerBI.csv files are moved here directly after successful checks.
-powerbi_details_dir = "V:/Powerbi_Details"
+powerbi_details_dir = 'C:\Users\uiv51287\OneDrive - Schaeffler\Desktop\wrapper_test_changes\Powerbi_Details'
 
 # Log root folder.
 #
 # Logs are written into one daily subfolder:
 # V:/Logs/YYYYMMDD/
-logs_dir = "V:/Logs"
+logs_dir = 'C:\Users\uiv51287\OneDrive - Schaeffler\Desktop\wrapper_test_changes\Logs'
 
 
 # ============================================================
@@ -518,8 +518,8 @@ logs_dir = "V:/Logs"
 
 # Existing Emb_Gan workflow stays unchanged.
 # Compatible Emb_Gan recipes should still go to V:/Powerbi_Details.
-"EMB_Gan_Prüfvorlage_zit" = "V:/Powerbi_Details"
+"EMB_Gan_Prüfvorlage_zit" = 'C:\Users\uiv51287\OneDrive - Schaeffler\Desktop\wrapper_test_changes\Powerbi_Details'
 
 # Future products get their own analytical details folders.
 "PCB_Recipe_zit" = "V:/Powerbi_Details_PCB"
-"Other_Product_Recipe_zit" = "V:/Powerbi_Details_Other_Product"
+"AllOnPCB_Prüfvorlage_zit" = 'C:\Users\uiv51287\OneDrive - Schaeffler\Desktop\wrapper_test_changes\Powerbi_Details_AllOnPCB'
